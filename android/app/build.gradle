@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'net.langamehub'
+    compileSdk 35
+    ndkVersion '28.2.13676358'
+    defaultConfig {
+        applicationId 'net.langamehub'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildFeatures { buildConfig true }
+    packaging { jniLibs { useLegacyPackaging = true } }
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/hub-assets')
+    sourceSets.main.jniLibs.srcDir layout.buildDirectory.dir('generated/hub-jni')
+}
+
+def prepare = tasks.register('prepareHub', Exec) {
+    workingDir rootProject.projectDir.parentFile
+    commandLine 'bash', 'scripts/prepare.sh', layout.buildDirectory.get().asFile.absolutePath
+}
+tasks.named('preBuild') { dependsOn prepare }
+dependencies { implementation 'com.google.zxing:core:3.5.3' }

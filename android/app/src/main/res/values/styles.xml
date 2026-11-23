@@ -1,0 +1,10 @@
+<resources>
+    <style name="HubTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#10141e</item>
+        <item name="android:navigationBarColor">#10141e</item>
+        <item name="android:windowBackground">#10141e</item>
+        <item name="android:colorAccent">#b6c4ff</item>
+    </style>
+</resources>

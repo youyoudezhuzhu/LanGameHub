@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { AVATARS, cleanPlayerName } from '@park/protocol';
+import { AVATARS } from '@park/protocol';
 import { randomToken, storage } from './platform';
 
 /** 极简的可订阅存储（无需额外状态库），带本地持久化。 */
@@ -84,13 +84,7 @@ export const profile = createStore<Profile>('park.profile', {
   avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)].id,
 });
 // 首次访问时把随机生成的身份写入本地
-const hostEntry = new URL(location.href);
-const hostName = hostEntry.searchParams.get('hostName');
-profile.set(hostName?.trim() ? { name: cleanPlayerName(hostName) } : {});
-if (hostName !== null) {
-  hostEntry.searchParams.delete('hostName');
-  history.replaceState(history.state, '', hostEntry);
-}
+profile.set({});
 
 /** 上次使用的各玩法设置 */
 export const lastSetup = createStore<

@@ -106,7 +106,10 @@ def main(base, software, browser_name):
         for key in ("fire", "ads", "reload", "jump", "sprint", "interact", "pause"):
             expect(controls.locator(f'[data-a={key}]')).to_be_visible()
         joystick = touch_point(controls.locator(".t-stick"))
-        look = {"id": 2, "x": 430, "y": 132}
+        canvas = guest.locator("#view").bounding_box()
+        assert canvas
+        look = {"id": 2, "x": round(canvas["x"] + canvas["width"] * .58),
+                "y": round(canvas["y"] + canvas["height"] * .35)}
         fire = touch_point(controls.locator("[data-a=fire]"), 3)
         cdp = phone.new_cdp_session(guest)
 
@@ -124,6 +127,9 @@ def main(base, software, browser_name):
         wait(host, "() => window.__G.input.move.y > .5", timeout=10000)
         host.keyboard.up("w")
         host.mouse.move(380, 190)
+        if host.evaluate('() => window.__G.input.mode === "lock" && !window.__G.input.locked'):
+            host.mouse.click(380, 190)
+            wait(host, '() => window.__G.input.locked || window.__G.input.mode === "drag"', timeout=10000)
         host.mouse.down()
         wait(host, "() => window.__G.input.fire", timeout=10000)
         host.mouse.up()

@@ -90,7 +90,11 @@ const createP2PSocket = () => { throw new Error("只支持游戏大厅局域网�
     [/import \{ DEFAULT_PORT[^\n]*\nimport \{ scanLan[^\n]*/, 'import { installHubSettings, wireHubMenu } from "../hub/settings.js";'],
     ['    if (v) return v;', `    if (v) return v;
     const hubName = JSON.parse(localStorage.getItem("park.profile") || "{}").name;
-    if (typeof hubName === "string" && hubName.trim()) return hubName.trim().slice(0, 16);`],
+    if (typeof hubName === "string" && hubName.trim()) {
+      const name = hubName.trim().slice(0, 16);
+      localStorage.setItem(MP_NAME_KEY, name);
+      return name;
+    }`],
     [/  var LAN_SCAN_TIMEOUT = [\s\S]*?\n  function lanSubnetErr/, '  function lanSubnetErr'],
     [/  function lanStartScan\(subnet\) \{[\s\S]*?\n  function lanRescanManual/, `  function lanStartScan() {
     if (lanScanning) return;
@@ -122,6 +126,8 @@ const createP2PSocket = () => { throw new Error("只支持游戏大厅局域网�
     [/自动发现/g, '刷新房间'],
     ['未发现房间，检查房主服务器是否已启动', '当前没有房间。可以创建房间，或凭房间码加入。'],
     ['鼠标灵敏度', '视角灵敏度'],
+    ['<dt>命中率</dt><dd data-f="acc">', '<dt data-f="acc-label">命中率</dt><dd data-f="acc">'],
+    ['          renderTeam(team));', '          (c("acc-label").textContent = team?.length ? "房主命中率" : "命中率"),\n          renderTeam(team));'],
     ['所有场景、机械与音效均在你的浏览器中实时生成，不下载任何资源。', '同一局域网的玩家可用房间码加入。'],
     ['if (D === "deploy" || D === "mp-start" || D === "redeploy")', 'if (["deploy", "mp-start", "redeploy", "join-confirm", "quick-join", "lan-join"].includes(D))'],
     ['<h1 class="m-word">SALTLINE</h1>', '<h1 class="m-word">港区防线</h1>'],
@@ -236,7 +242,13 @@ const createP2PSocket = () => { throw new Error("只支持游戏大厅局域网�
       if (!interval) nextDraw = 0;
     }
     params.dt && (p = +params.dt);`],
-    ['        context.render.frame(p);', '        context.render.frame(Math.min(drawTime, 0.1));\n        drawTime = 0;'],
+    ['    (render &&\n      context.game.state !== "paused" &&', `    const visualDelta = Math.min(drawTime, 0.1);
+    if (render) drawTime = 0;
+    (render &&
+      context.game.state !== "paused" &&`],
+    ...['fx', 'ground', 'level', 'backdrop', 'mats', 'hud'].map(system =>
+      [`updateSystem("${system}", p)`, `updateSystem("${system}", visualDelta)`]),
+    ['        context.render.frame(p);', '        context.render.frame(visualDelta);'],
   ]);
   await edit('src/core/config.js', [
     [/  low: \{[\s\S]*?\n  \},/, `  low: {
@@ -260,6 +272,11 @@ const createP2PSocket = () => { throw new Error("只支持游戏大厅局域网�
   ]);
   await edit('src/app/diagnostics.js', [
     ['"Saltline could not start: " + i', '"港区防线启动失败。请重新打开页面，并检查浏览器是否支持 WebGL 2。"'],
+  ]);
+  await edit('src/game/flow.js', [
+    ['      players: stats.players,', `      team: (stats.players || []).map(player => ({
+        ...player, you: player.id === netApi()?.selfId(),
+      })),`],
   ]);
   await edit('src/game/pvp.js', [
     ['队伍先达二十杀，或撑满五分钟。', '率先达成二十次击杀的队伍获胜。'],

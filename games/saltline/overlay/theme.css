@@ -17,6 +17,7 @@
   border-radius: 16px;
 }
 .menu .m-veil { background: rgb(13 19 33 / 67%); }
+.menu .loc-card { pointer-events: none; }
 .menu .btn, .menu .mode-btn, .menu .m-name-input, .menu .m-join-code,
 .hub-settings select {
   background: #252e48;

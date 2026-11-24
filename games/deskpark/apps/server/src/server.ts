@@ -2,6 +2,7 @@ import type { ServerMessage } from '@park/protocol';
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createServer as createHttpServer } from 'node:http';
+import { createRequire as loadCommonJs } from 'node:module';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -10,6 +11,7 @@ import { clientIp } from './net';
 import { allowedHost, isAdmin, localPeer, sameOrigin } from './lan';
 import type { ServerConfig } from './rooms';
 import { DEFAULT_CONFIG, Hub } from './rooms';
+import { loadSaltline } from './saltline';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -123,6 +125,7 @@ export function startServer(opts: StartOptions) {
   const config: ServerConfig = { ...DEFAULT_CONFIG, ...opts.config };
   const hub = new Hub(config);
   const staticDir = opts.staticDir === null ? null : resolve(opts.staticDir ?? defaultStaticDir());
+  const saltline = staticDir && loadSaltline(staticDir, loadCommonJs(import.meta.url), config.log);
 
   let pvz: { version: string } | undefined;
   if (staticDir) {
@@ -151,15 +154,16 @@ export function startServer(opts: StartOptions) {
       if (req.method === 'GET' && req.url === '/api/host') {
         res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
         res.end(JSON.stringify({
-          service: 'LAN Game Hub', ...hub.stats(), sockets: wss.clients.size,
+          service: 'LAN Game Hub', ...counts(), sockets: wss.clients.size + (saltWss?.clients.size ?? 0),
           rss: process.memoryUsage().rss, uptime: Math.floor(process.uptime()),
-          roomList: hub.roomSummaries(),
+          roomList: [...hub.roomSummaries(), ...(saltline ? saltline.relay.roomSummaries() : [])],
         }));
         return;
       }
       const match = /^\/api\/host\/rooms\/([A-Z0-9]{4})$/.exec(req.url);
       if (req.method === 'DELETE' && match) {
-        res.writeHead(hub.closeRoom(match[1]) ? 204 : 404).end();
+        const code = match[1];
+        res.writeHead((code.startsWith('S') ? saltline && saltline.relay.closeRoom(code) : hub.closeRoom(code)) ? 204 : 404).end();
         return;
       }
       res.writeHead(404).end();
@@ -171,7 +175,17 @@ export function startServer(opts: StartOptions) {
     }
     if (req.url === '/healthz' || req.url === '/api/status') {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ ok: true, ...hub.stats(), ...(req.url === '/api/status' && pvz ? { pvz } : {}) }));
+      const modules = req.url === '/api/status' ? { pvz, saltline: saltline ? { revision: saltline.revision } : undefined } : {};
+      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ ok: true, ...counts(), ...modules }));
+      return;
+    }
+    if (req.url === '/api/saltline/rooms') {
+      if (!saltline) {
+        res.writeHead(404).end();
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : JSON.stringify(saltline.relay.lanInfo()));
       return;
     }
     if (!opts.lanOnly && isAiProxyPath(req.url)) {
@@ -198,32 +212,36 @@ export function startServer(opts: StartOptions) {
   http.keepAliveTimeout = 5000;
   http.setTimeout(20000, (socket) => socket.destroy());
   const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+  const saltWss = saltline ? new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 }) : null;
+  function counts() {
+    const stats = hub.stats();
+    const salt = saltline ? saltline.relay.stats() : null;
+    return { ...stats, clients: stats.clients + (salt?.sockets ?? 0), rooms: stats.rooms + (salt?.rooms ?? 0) };
+  }
+  const perIp = new Map<string, number>();
+  const maxPerIp = Number(process.env.MAX_CONN_PER_IP) || 20;
   http.on('upgrade', (req, socket, head) => {
-    const allowed = req.url === '/ws' && wss.clients.size < 96 &&
+    const target = req.url === '/ws' ? wss : req.url === '/ws/saltline' ? saltWss : null;
+    const ip = opts.lanOnly ? req.socket.remoteAddress ?? '' : clientIp(req);
+    const allowed = target && wss.clients.size + (saltWss?.clients.size ?? 0) < 96 &&
+      (perIp.get(ip) ?? 0) < maxPerIp &&
       (!opts.lanOnly || (allowedHost(req) && localPeer(req) && sameOrigin(req)));
     if (!allowed) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
       return;
     }
     req.socket.setTimeout(0);
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
-  });
-  // 每个 IP 的同时连接数上限，防止单个来源占满资源
-  const perIp = new Map<string, number>();
-  const maxPerIp = Number(process.env.MAX_CONN_PER_IP) || 20;
-  wss.on('connection', (socket, req) => {
-    const ip = opts.lanOnly ? req.socket.remoteAddress ?? '' : clientIp(req);
-    const n = (perIp.get(ip) ?? 0) + 1;
-    if (n > maxPerIp) {
-      socket.close(1008, 'too many connections');
-      return;
-    }
-    perIp.set(ip, n);
-    socket.on('close', () => {
-      const left = (perIp.get(ip) ?? 1) - 1;
-      if (left <= 0) perIp.delete(ip);
-      else perIp.set(ip, left);
+    target.handleUpgrade(req, socket, head, (ws) => {
+      perIp.set(ip, (perIp.get(ip) ?? 0) + 1);
+      ws.on('close', () => {
+        const left = (perIp.get(ip) ?? 1) - 1;
+        if (left <= 0) perIp.delete(ip);
+        else perIp.set(ip, left);
+      });
+      target.emit('connection', ws);
     });
+  });
+  wss.on('connection', (socket) => {
     const send = (msg: ServerMessage) => {
       if (socket.bufferedAmount > 128 * 1024) socket.terminate();
       else if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg));
@@ -244,6 +262,26 @@ export function startServer(opts: StartOptions) {
     socket.on('close', onClose);
     socket.on('error', () => socket.close());
   });
+  if (saltline && saltWss) {
+    const { relay } = saltline;
+    saltWss.on('connection', (socket) => {
+      relay.onOpen(socket);
+      let tokens = 240;
+      let refilledAt = Date.now();
+      socket.on('message', (data, binary) => {
+        if (binary) return;
+        const now = Date.now();
+        tokens = Math.min(240, tokens + Math.max(0, now - refilledAt) * 0.12);
+        refilledAt = now;
+        if (tokens < 1) return;
+        tokens--;
+        relay.onMessage(socket, data);
+      });
+      socket.on('pong', () => relay.onPong(socket));
+      socket.on('close', () => relay.onClose(socket));
+      socket.on('error', () => socket.terminate());
+    });
+  }
 
   // 心跳：清理僵尸连接
   const alive = new WeakSet<object>();
@@ -276,6 +314,8 @@ export function startServer(opts: StartOptions) {
     clearInterval(heartbeat);
     clearInterval(sweeper);
     hub.dispose();
+    if (saltline) saltline.relay.dispose();
+    if (saltWss) await new Promise<void>((r) => saltWss.close(() => r()));
     for (const s of wss.clients) s.terminate();
     await new Promise<void>((r) => wss.close(() => r()));
     await new Promise<void>((r) => { http.close(() => r()); http.closeAllConnections(); });

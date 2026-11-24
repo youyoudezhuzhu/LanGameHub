@@ -65,6 +65,7 @@ public final class MainActivity extends Activity {
     private SharedPreferences preferences;
     private int selected;
     private boolean pvzInstalled;
+    private boolean saltlineInstalled;
     private boolean visible;
     private boolean loading;
     private long startingUntil;
@@ -97,6 +98,9 @@ public final class MainActivity extends Activity {
         preferences = getSharedPreferences("hub", MODE_PRIVATE);
         try (java.io.InputStream module = getAssets().open("hub/web/games/pvz/hub-module.json")) {
             pvzInstalled = module.read() != -1;
+        } catch (java.io.IOException ignored) {}
+        try (java.io.InputStream module = getAssets().open("hub/web/games/saltline/hub-module.json")) {
+            saltlineInstalled = module.read() != -1;
         } catch (java.io.IOException ignored) {}
         if (!preferences.contains("secret")) {
             byte[] random = new byte[32];
@@ -133,7 +137,7 @@ public final class MainActivity extends Activity {
     private int port() { return preferences.getInt("port", 8787); }
     private String secret() { return preferences.getString("secret", ""); }
     private boolean online() { return status != null; }
-    private int installedGameCount() { return GAMES.length + (pvzInstalled ? 1 : 0); }
+    private int installedGameCount() { return GAMES.length + (pvzInstalled ? 1 : 0) + (saltlineInstalled ? 1 : 0); }
 
     private void refresh() {
         if (loading || executor.isShutdown()) return;
@@ -436,8 +440,10 @@ public final class MainActivity extends Activity {
             games.addView(line);
         }
         if (pvzInstalled) games.addView(label("◈   pvz_perf  ·  离线单人", 16, ink));
+        if (saltlineInstalled) games.addView(label("◈   Saltline  ·  单人、合作与对抗", 16, ink));
         LinearLayout pending = card("待接入");
-        pending.addView(label(pvzInstalled ? "Slithering.io、Saltline" : "Slithering.io、Saltline、pvz_perf", 15, muted));
+        pending.addView(label("Slithering.io" + (saltlineInstalled ? "" : "、Saltline")
+                + (pvzInstalled ? "" : "、pvz_perf"), 15, muted));
     }
 
     private String roomData() { return online() ? status.optString("roomList") : ""; }

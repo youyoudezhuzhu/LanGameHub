@@ -624,7 +624,8 @@ export class Hub {
       const bytes = randomBytes(ROOM_CODE_LENGTH);
       for (let i = 0; i < ROOM_CODE_LENGTH; i++)
         code += ROOM_CODE_ALPHABET[bytes[i] % ROOM_CODE_ALPHABET.length];
-      if (!this.rooms.has(code)) return code;
+      // S 开头的房间码由 Saltline 使用，游戏大厅可直接路由。
+      if (!code.startsWith('S') && !this.rooms.has(code)) return code;
     }
   }
 

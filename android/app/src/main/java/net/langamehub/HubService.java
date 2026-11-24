@@ -54,6 +54,13 @@ public final class HubService extends Service {
             String version = Long.toString(installedAt);
             String previous = marker.isFile() ? new String(Files.readAllBytes(marker.toPath()), StandardCharsets.UTF_8) : "";
             if (!version.equals(previous)) {
+                if (root.isDirectory()) {
+                    try (java.util.stream.Stream<java.nio.file.Path> files = Files.walk(root.toPath())) {
+                        for (java.nio.file.Path path : (Iterable<java.nio.file.Path>) files.sorted(java.util.Comparator.reverseOrder())::iterator) {
+                            Files.delete(path);
+                        }
+                    }
+                }
                 copyAssets(getAssets(), "hub", root);
                 Files.write(marker.toPath(), version.getBytes(StandardCharsets.UTF_8));
             }

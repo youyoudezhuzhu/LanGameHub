@@ -1,0 +1,131 @@
+/* LAN Game Hub palette. Gameplay scene and HUD retain their own contrast. */
+.menu {
+  --ink: #111728;
+  --bone: #eef1ff;
+  --steel: #b5c1e5;
+  --line: #536184;
+  --signal: #c5d1ff;
+  --signal-hot: #dce3ff;
+  --f-label: system-ui, sans-serif;
+  --f-display: system-ui, sans-serif;
+  color: var(--bone);
+}
+.menu .panel, .menu .m-modal-card, .menu .m-card,
+.menu .m-host > *, .menu .m-join > * {
+  background-color: #182139;
+  border-color: var(--line);
+  border-radius: 16px;
+}
+.menu .m-veil { background: rgb(13 19 33 / 67%); }
+.menu .btn, .menu .mode-btn, .menu .m-name-input, .menu .m-join-code,
+.hub-settings select {
+  background: #252e48;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--bone);
+  letter-spacing: normal;
+}
+.menu .btn { min-height: 44px; }
+.menu .btn.primary { background: var(--signal); color: var(--ink); }
+.menu .btn:disabled { opacity: .55; }
+.menu a.hub-return {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.menu .m-word { font-size: clamp(40px, 8vw, 110px); letter-spacing: .08em; }
+.menu .m-title-main { max-width: 770px; }
+.menu .m-card {
+  max-height: calc(100dvh - var(--sat) - var(--sab) - 16px);
+  overflow: auto;
+}
+.menu[data-screen="roundend"] [data-s="roundend"] { display: block; }
+.menu [data-act="p2p-lobby"], .menu .m-p2p-lobby, .menu .m-p2p-host-extra,
+.menu .m-p2p-toggle, .menu .m-p2p-box, .menu .m-lan-subnet { display: none !important; }
+.hub-settings select { padding: 7px 10px; min-height: 38px; }
+.hub-layout { margin-block: 12px; }
+.hub-layout h3 { margin-bottom: 12px; }
+.hub-layout-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #111728;
+}
+.hub-layout-preview span {
+  --s: calc(var(--control-size) * .37);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: clamp(var(--s) / 2, var(--control-x), 100% - var(--s) / 2);
+  top: clamp(var(--s) / 2, var(--control-y), 100% - var(--s) / 2);
+  width: var(--s);
+  height: var(--s);
+  display: grid;
+  place-content: center;
+  white-space: nowrap;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font: 9px system-ui, sans-serif;
+  background: #252e48;
+  opacity: var(--control-opacity);
+}
+.hub-layout-preview .selected { background: #c5d1ff; color: #111728; z-index: 1; }
+.hub-landscape { display: none; }
+.hub-touch {
+  inset: calc(var(--sat) + 6px) calc(var(--sar) + 6px) calc(var(--sab) + 6px) calc(var(--sal) + 6px);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hub-touch :is(.t-stick, .t-btn) {
+  --s: min(var(--control-size), max(44px, 29dvh));
+  left: clamp(var(--s) / 2, var(--control-x), 100% - var(--s) / 2);
+  top: clamp(var(--s) / 2, var(--control-y), 100% - var(--s) / 2);
+  bottom: auto;
+  right: auto;
+  width: var(--s);
+  height: var(--s);
+  transform: translate(-50%, -50%);
+  opacity: var(--control-opacity);
+  touch-action: none;
+  pointer-events: auto;
+  border: 1px solid #94a4d9;
+  border-radius: 50%;
+  background: rgb(23 32 56 / 63%);
+  color: #eef1ff;
+  font: 600 12px/1 system-ui, sans-serif;
+}
+.hub-touch :is(.active, .t-stick.on, .t-interact.on) { border-color: #dce3ff; background: rgb(70 91 150 / 82%); }
+.hub-touch .t-interact { display: block; }
+.hub-touch .t-nub { inset: 31%; width: 38%; height: 38%; pointer-events: none; }
+@media (pointer: coarse) {
+  .menu .m-legend { display: none; }
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  .menu .hub-landscape { display: block; margin-bottom: 14px; color: #c5d1ff; }
+}
+@media (max-height: 560px) {
+  .menu .m-title {
+    align-items: center;
+    overflow-y: auto;
+    padding: max(12px, var(--sat)) max(18px, var(--sar)) max(12px, var(--sab)) max(18px, var(--sal));
+  }
+  .menu .m-title .m-actions { gap: 6px; }
+  .menu .m-title .m-legend { display: none; }
+  .menu .m-card { padding: 14px; }
+  .menu .m-host, .menu .m-join { overflow: auto; align-items: start; }
+}
+.menu :is(.m-host, .m-join) {
+  padding: max(8px, var(--sat)) max(8px, var(--sar)) max(8px, var(--sab)) max(8px, var(--sal));
+}
+.menu :is(.m-host-card, .m-join-card) { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .menu :is(.m-host, .m-join) { align-items: center; }
+  .menu :is(.m-host-card, .m-join-card) { width: min(540px, 100%); padding: 12px 16px; }
+  .menu .m-mode-seg { display: grid; grid-template-columns: 1fr 1fr; }
+  .menu .mode-btn { padding: 8px 10px; }
+  .menu .m-host-tip { margin: 5px 0 8px !important; }
+  .menu .m-host .m-actions { margin-top: 7px; }
+}

@@ -115,7 +115,7 @@ export function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [code, setCode] = useState('');
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
-  const [counts, setCounts] = useState<{ clients: number; rooms: number; pvz?: { version: string } } | null>(null);
+  const [counts, setCounts] = useState<{ clients: number; rooms: number; pvz?: { version: string }; saltline?: { revision: string } } | null>(null);
   useEffect(() => {
     online.connect();
     const controller = new AbortController();
@@ -134,7 +134,9 @@ export function Home() {
 
   const join = () => {
     const c = normalizeRoomCode(code);
-    if (c.length === 4) navigate(`/room/${c}`);
+    if (c.length !== 4) return;
+    if (c.startsWith('S')) location.assign(`/games/saltline/?room=${c}`);
+    else navigate(`/room/${c}`);
   };
 
   const groups = CATEGORIES.map((c) => ({
@@ -247,7 +249,7 @@ export function Home() {
       )}
 
       <div className="hub-library">
-        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, counts?.pvz ? 1 : 0)} 款游戏</p></div>
+        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, Number(!!counts?.pvz) + Number(!!counts?.saltline))} 款游戏</p></div>
         <div className="hub-filters" role="group" aria-label="游戏分类">
           {[{ id: 'all' as const, title: '全部' }, ...CATEGORIES].map((item) => (
             <button key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
@@ -261,6 +263,20 @@ export function Home() {
           <h2>{group.title}</h2>
           <div className="games">
             {group.games.map(tile)}
+            {group.id === 'arcade' && counts?.saltline && (
+              <article className="gtile">
+                <div className="gtile__art saltline-tile-art" aria-hidden="true"><Gamepad2 size={42} /></div>
+                <div className="gtile__body">
+                  <div className="gtile__head"><h3>Saltline</h3></div>
+                  <p className="gtile__tagline">港区行动 · 单人任务、合作和团队对抗</p>
+                  <div className="gtile__actions">
+                    <a className="btn btn--primary btn--sm" href="/games/saltline/"><Play size={14} /> 进入</a>
+                    <a className="btn btn--sm" href="/games/saltline/?action=host">创建房间</a>
+                    <a className="btn btn--sm" href="/games/saltline/?action=join">加入房间</a>
+                  </div>
+                </div>
+              </article>
+            )}
             {group.id === 'arcade' && counts?.pvz && (
               <article className="gtile">
                 <div className="gtile__art pvz-tile-art" aria-hidden="true"><Gamepad2 size={42} /></div>

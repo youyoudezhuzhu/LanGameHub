@@ -32,6 +32,10 @@ pvz_source=""
 if [[ -n "${HUB_PVZ_WEB_DIR:-}" ]]; then
   pvz_source=$(cd "$HUB_PVZ_WEB_DIR" && pwd -P)
 fi
+saltline_source=""
+if [[ -n "${HUB_SALTLINE_SOURCE:-}" ]]; then
+  saltline_source=$(cd "$HUB_SALTLINE_SOURCE" && pwd -P)
+fi
 cd "$project/games/deskpark"
 if [[ "${HUB_SKIP_NPM_CI:-0}" != 1 ]]; then
   npm ci --no-audit --no-fund
@@ -43,6 +47,9 @@ assets="$out/generated/hub-assets/hub"
 case "$pvz_source" in
   "$assets"|"$assets"/*) echo 'Keep your PvZ input outside generated APK assets.' >&2; exit 1 ;;
 esac
+case "$saltline_source" in
+  "$assets"|"$assets"/*) echo 'Keep your Saltline source outside generated APK assets.' >&2; exit 1 ;;
+esac
 rm -rf "$assets"
 mkdir -p "$assets/web/licenses"
 cp -R apps/web/dist/. "$assets/web/"
@@ -52,6 +59,10 @@ cp LICENSE "$assets/web/licenses/DeskPark.txt"
 node "$project/scripts/licenses.mjs" "$assets/web/licenses/npm.txt"
 if [[ -n "$pvz_source" ]]; then
   node "$project/scripts/stage-pvz.mjs" "$pvz_source" "$assets/web"
+fi
+
+if [[ -n "$saltline_source" ]]; then
+  node "$project/scripts/stage-saltline.mjs" "$saltline_source" "$assets"
 fi
 
 for abi in arm64-v8a x86_64; do

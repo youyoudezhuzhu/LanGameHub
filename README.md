@@ -28,6 +28,17 @@ HUB_PVZ_WEB_DIR=/absolute/path/to/pvz-perf-offline ./scripts/build-apk.sh
 
 导入后，游戏库的「街机」分类提供 pvz_perf 单人入口。游戏由当前浏览器运行。玩家可先在游戏中退出保存，再点「返回大厅」。项目默认构建和公开发行都无需 PvZ 素材，也不会下载它们。
 
+### 自用构建中导入 Saltline
+
+局域网联机适配基于 CandGo 的 `zh-multiplayer` 分支，保留单人任务、合作和团队对抗。构建器从指定提交读取源码并打补丁，构建好的网页、字体和房间中继随 APK 安装。默认构建不含 Saltline。
+
+```sh
+git clone --branch zh-multiplayer https://github.com/CandGo/3A-online-web.git /tmp/saltline-upstream
+HUB_SALTLINE_SOURCE=/tmp/saltline-upstream ./scripts/build-apk.sh
+```
+
+使用有权使用的源码。浏览器从游戏库的「街机」分类进入 Saltline。在同一个大厅输入房间码可跳转到加入页，公开房也可在 Saltline 内刷新查找。手机建议横屏，在「设置」里可调整画质、帧率、渲染比例与触控布局。验收进度与真机步骤见 [Saltline P1](docs/Saltline-P1.md)。
+
 ## 桌面开发和测试
 
 ```sh

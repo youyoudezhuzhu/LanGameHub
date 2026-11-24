@@ -113,10 +113,10 @@ export default function GuandanBoard({ ctl }: { ctl: Ctl }) {
   );
 
   const returnCard = selected[0];
-  const returnOk =
-    !!returnCard &&
-    returnCard.suit !== 'J' &&
-    (returnCard.rank <= 10 || !v.hand.some((c) => c.suit !== 'J' && c.rank <= 10));
+  // 还贡：10 或以下，排除王与红桃级牌（万能牌不能还，和本地打法一致）
+  const canReturn = (c: Card) => c.suit !== 'J' && c.rank <= 10 && !gd.isWild(c, level);
+  const returnOk = !!returnCard && canReturn(returnCard);
+  const returnHint = returnCard && !returnOk ? '还贡须是 10 或以下的非万能牌' : null;
 
   return (
     <div className="gd">
@@ -199,7 +199,11 @@ export default function GuandanBoard({ ctl }: { ctl: Ctl }) {
         {myReturn && (
           <div className="action-bar">
             <span className="action-hint">
-              选择一张 <b>10 或以下</b> 的牌还给 {players[myReturn.to].name}
+              {returnHint ?? (
+                <>
+                  选择一张 <b>10 或以下</b> 的牌还给 {players[myReturn.to].name}
+                </>
+              )}
             </span>
             <Button
               variant="felt-primary"

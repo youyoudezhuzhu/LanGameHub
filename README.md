@@ -59,6 +59,7 @@ LAN_HUB=1 HOST=0.0.0.0 PORT=8787 STATIC_DIR="$PWD/apps/web/dist" node apps/serve
 - [研发阶段、上游差异与接入边界](docs/调研与实施边界.md)
 - [Android、网页和联机架构](docs/架构.md)
 - [横竖屏适配（12 款玩法的双布局与验收）](docs/横竖屏适配.md)
+- [掼蛋规则对照（本地打法 vs 合集引擎）](docs/掼蛋规则对照.md)
 - [来源和许可证清单](docs/许可证.md)
 - [0.2.0 测试报告与剩余验收](docs/测试报告-v0.2.0.md)
 - [0.1.0 测试报告及真机验收步骤](docs/测试报告.md)

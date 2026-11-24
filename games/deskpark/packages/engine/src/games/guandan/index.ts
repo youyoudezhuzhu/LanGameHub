@@ -123,8 +123,13 @@ function tributeCard(hand: Card[], level: number): Card {
   return sortCards(candidates.length ? candidates : hand, (c) => gdValue(c, level))[0];
 }
 
-function canReturn(card: Card): boolean {
-  return card.suit !== 'J' && card.rank <= 10;
+/**
+ * 还贡的牌：10 或以下，且不能是王、也不能是红桃级牌（万能牌）。
+ * 万能牌排除这一点对齐本地打法（本地仓库 pickRepay 明确排除），
+ * 否则打 2~10 的局里收贡方可以把万能牌还出去。
+ */
+function canReturn(card: Card, level: number): boolean {
+  return card.suit !== 'J' && card.rank <= 10 && !isWild(card, level);
 }
 
 function startRound(state: GdState): void {
@@ -311,9 +316,13 @@ export const guandan: GameDefinition<GdState, GdAction, GdView, GdOptions> = {
         if (!r) return '你不需要还贡';
         const card = state.hands[seat].find((c) => c.id === action.card);
         if (!card) return '请选择一张牌';
-        const hasSmall = state.hands[seat].some(canReturn);
-        if (hasSmall && !canReturn(card)) return '还贡须是 10 或以下的牌';
         if (card.suit === 'J') return '不能还王';
+        const hasSmall = state.hands[seat].some((c) => canReturn(c, state.level));
+        if (hasSmall && !canReturn(card, state.level)) {
+          return isWild(card, state.level)
+            ? '万能牌（红桃级牌）不能还贡'
+            : '还贡须是 10 或以下的牌';
+        }
         return null;
       }
       case 'play': {

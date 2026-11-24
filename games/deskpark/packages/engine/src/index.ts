@@ -15,6 +15,7 @@ import { hexisle } from './games/hexisle';
 import { highcard } from './games/highcard';
 import { onecard } from './games/onecard';
 import { sichuan } from './games/sichuan';
+import { snake } from './games/snake';
 import { spellstones } from './games/spellstones';
 import { texas } from './games/texas';
 import { xiangqi } from './games/xiangqi';
@@ -24,6 +25,7 @@ export * as gd from './games/guandan';
 export * as tx from './games/texas';
 export * as hc from './games/highcard';
 export * as sc from './games/sichuan';
+export * as snakeArena from './games/snake';
 export * as ss from './games/spellstones';
 export * as oc from './games/onecard';
 export * as hi from './games/hexisle';
@@ -43,6 +45,7 @@ export {
   onecard,
   hexisle,
   gemguild,
+  snake,
   highcard,
 };
 
@@ -58,6 +61,7 @@ for (const g of [
   onecard,
   hexisle,
   gemguild,
+  snake,
   highcard,
 ])
   registerGame(g);

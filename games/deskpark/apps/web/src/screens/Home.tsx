@@ -24,6 +24,7 @@ const CATEGORIES: { id: GameCategory; title: string }[] = [
   { id: 'mahjong', title: '麻将' },
   { id: 'chess', title: '棋类' },
   { id: 'board', title: '桌游' },
+  { id: 'arcade', title: '街机' },
 ];
 
 function GameArt({ ui }: { ui: GameUI }) {
@@ -246,7 +247,7 @@ export function Home() {
       )}
 
       <div className="hub-library">
-        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, 0)} 款桌游</p></div>
+        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, 0)} 款游戏</p></div>
         <div className="hub-filters" role="group" aria-label="游戏分类">
           {[{ id: 'all' as const, title: '全部' }, ...CATEGORIES].map((item) => (
             <button key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>

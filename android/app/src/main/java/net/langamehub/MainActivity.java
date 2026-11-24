@@ -57,7 +57,7 @@ public final class MainActivity extends Activity {
     private static final String[] TABS = {"服务", "游戏", "房间", "设置", "诊断"};
     private static final String[] GAMES = {
         "斗地主", "掼蛋", "德州扑克", "四川麻将", "中国象棋", "国际象棋",
-        "魔法出包", "UON", "卡旦岛", "宝石商会"
+        "魔法出包", "UON", "卡旦岛", "宝石商会", "流光蛇场"
     };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -424,7 +424,7 @@ public final class MainActivity extends Activity {
     }
 
     private void games() {
-        LinearLayout games = card("已安装游戏 · DeskPark 0.3.0");
+        LinearLayout games = card("已安装游戏");
         for (String game : GAMES) {
             TextView line = label("◈   " + game + "  ·  单人 / 局域网联机", 16, ink);
             line.setPadding(0, dp(9), 0, dp(9));

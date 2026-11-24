@@ -9,7 +9,7 @@ from playwright.sync_api import expect, sync_playwright
 VIEWPORTS = ((360, 800), (393, 873), (900, 400),
              (980, 420), (1280, 800), (1920, 1080))
 GAMES = ("doudizhu", "guandan", "texas", "sichuan", "xiangqi", "chess",
-         "spellstones", "onecard", "hexisle", "gemguild")
+         "spellstones", "onecard", "hexisle", "gemguild", "snake")
 
 
 def browser_context(browser, base, width, height, errors):
@@ -72,7 +72,7 @@ def main(base, screenshots):
                 page = new_page(ctx, errors)
                 page.goto(base)
                 expect(page.get_by_role("heading", name="游戏库")).to_be_visible()
-                expect(page.locator("article")).to_have_count(10)
+                expect(page.locator("article")).to_have_count(len(GAMES))
                 expect(page.locator(".hub-status")).to_contain_text("人在线")
                 assert_width(page)
                 page.screenshot(path=screenshots / f"lobby-{width}x{height}.png", animations="disabled")
@@ -96,7 +96,7 @@ def main(base, screenshots):
                     expect(page.get_by_text("正在摆牌…", exact=True)).to_have_count(0)
                     assert_width(page)
                     page.screenshot(path=screenshots / f"{game}-{width}x{height}.png", animations="disabled")
-            print(f"{width}×{height}: rendered all 10 single-player boards", flush=True)
+            print(f"{width}×{height}: rendered all {len(GAMES)} single-player boards", flush=True)
 
         with browser_context(browser, base, 393, 873, errors) as c1, \
                 browser_context(browser, base, 1280, 800, errors) as c2:

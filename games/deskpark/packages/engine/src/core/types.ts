@@ -28,7 +28,7 @@ export type OptionField =
     };
 
 /** 玩法大类：大厅据此分组展示 */
-export type GameCategory = 'poker' | 'mahjong' | 'chess' | 'board' | 'casual';
+export type GameCategory = 'poker' | 'mahjong' | 'chess' | 'board' | 'arcade' | 'casual';
 
 export interface GameMeta {
   id: string;
@@ -81,6 +81,11 @@ export interface GameDefinition<S = any, A = any, V = any, O = any> {
   bot(view: V, seat: Seat, rng: Rng): A;
   /** 可选：需要系统定时推进时返回动作与延迟。 */
   autoAdvance?(state: S): { delayMs: number; action: A } | null;
+  /** 固定频率同步推进。真人动作只更新输入，局面随时钟发布。 */
+  realtime?: {
+    stepMs: number;
+    step(state: S, automated: readonly boolean[]): S;
+  };
   /**
    * 可选：把某个座位的 view 整理成给大模型看的局面与候选动作。
    * 返回 null 表示这一步不需要大模型（例如"准备"），由规则电脑处理。

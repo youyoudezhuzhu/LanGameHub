@@ -162,7 +162,7 @@ export function TableShell({
   const emotes = ctl.mode === 'online' ? net.emotes.filter((e) => Date.now() - e.at < 3500) : [];
 
   return (
-    <div className="table" data-felt={s.felt}>
+    <div className={ctl.def.realtime ? 'table table--arena' : 'table'} data-felt={s.felt}>
       <header className="table__top">
         <div className="table__top-left">
           <IconButton label="返回" onClick={onBack}>
@@ -228,7 +228,7 @@ export function TableShell({
 
       {ctl.auto && (
         <div className="auto-banner">
-          <Bot size={15} /> 托管中，电脑正在替你出牌
+          <Bot size={15} /> {ctl.def.realtime ? '托管中，电脑正在控制你的角色' : '托管中，电脑正在替你出牌'}
           <button onClick={() => ctl.setAuto(false)}>取消托管</button>
         </div>
       )}

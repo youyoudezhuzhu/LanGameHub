@@ -32,11 +32,11 @@ mkdir -p "$work"/{classes,dex,java/net/langamehub,lib}
 sed 's/<manifest xmlns:/<manifest package="net.langamehub" xmlns:/' "$main/AndroidManifest.xml" > "$work/AndroidManifest.xml"
 "$tools/aapt2" compile --dir "$main/res" -o "$work/resources.zip"
 "$tools/aapt2" link -I "$android" --manifest "$work/AndroidManifest.xml" \
-  --debug-mode --min-sdk-version 26 --target-sdk-version 35 --version-code 1 --version-name 0.1.0 \
+  --debug-mode --min-sdk-version 26 --target-sdk-version 35 --version-code 2 --version-name 0.2.0 \
   -A "$build/generated/hub-assets" --java "$work/java" -o "$work/unsigned.apk" "$work/resources.zip"
 cat > "$work/java/net/langamehub/BuildConfig.java" <<'JAVA'
 package net.langamehub;
-public final class BuildConfig { public static final int VERSION_CODE = 1; }
+public final class BuildConfig { public static final int VERSION_CODE = 2; }
 JAVA
 find "$main/java" "$work/java" -name '*.java' -type f -print > "$work/sources"
 if [[ -n "${HUB_ECJ_JAR:-}" ]]; then

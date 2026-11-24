@@ -1,0 +1,41 @@
+.snake-art {
+  width: 122px;
+  aspect-ratio: 1.9;
+  position: relative;
+  rotate: -12deg;
+}
+
+.snake-art__trail {
+  position: absolute;
+  left: 4px;
+  bottom: 5px;
+  width: 74px;
+  height: 38px;
+  border: solid #83f1d2;
+  border-width: 0 20px 20px 0;
+  border-radius: 0 0 28px 10px;
+  filter: drop-shadow(0 7px 7px #0d172866);
+}
+
+.snake-art__trail::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: -10px;
+  width: 20px;
+  height: 22px;
+  border-radius: 9px 9px 0 0;
+  background: radial-gradient(circle at 50% 40%, #12233f 2px, transparent 2.5px), #b0ffe8;
+}
+
+.snake-art__prism {
+  position: absolute;
+  right: 5px;
+  top: 8px;
+  width: 15px;
+  height: 15px;
+  rotate: 45deg;
+  border-radius: 3px;
+  background: #ffdc87;
+  box-shadow: 0 0 14px #ffdc8766;
+}

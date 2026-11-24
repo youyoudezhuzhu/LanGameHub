@@ -11,7 +11,7 @@ from websockets.asyncio.client import connect
 from websockets.exceptions import InvalidStatus
 
 GAMES = ("doudizhu", "guandan", "texas", "sichuan", "xiangqi", "chess",
-         "spellstones", "onecard", "hexisle", "gemguild")
+         "spellstones", "onecard", "hexisle", "gemguild", "snake")
 HTTP = build_opener(ProxyHandler({}))
 
 

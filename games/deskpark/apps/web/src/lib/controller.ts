@@ -135,7 +135,8 @@ export function useLocalController(
 
   useEffect(() => {
     if (!table) return;
-    const save = () =>
+    const save = () => {
+      if (table.def.realtime) return;
       storage.set(SAVE_KEY, {
         gameId,
         seats: table.seats,
@@ -143,8 +144,9 @@ export function useLocalController(
         state: table.state,
         version: table.version,
       } satisfies SavedLocal);
+    };
     const unsub = table.subscribe(() => {
-      if (table.isOver()) clearSavedLocal();
+      if (table.isOver() && !table.def.realtime) clearSavedLocal();
       else save();
       bump();
     });
@@ -201,7 +203,7 @@ export function useLocalController(
       setAuto: (on) => table.setAuto(0, on),
       canRestart: true,
       restart: () => {
-        clearSavedLocal();
+        if (!def.realtime) clearSavedLocal();
         setTable(
           makeTable(
             def,
@@ -250,7 +252,7 @@ export function useOnlineController(): GameController | null {
       over: game.over,
       last: game.last,
       act: (action) => {
-        online.send({ t: 'act', action });
+        if (!def.realtime || online.getState().status === 'open') online.send({ t: 'act', action });
         return null;
       },
       auto: !!mySeat?.auto,

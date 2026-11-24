@@ -128,6 +128,7 @@ export class Table<G extends AnyGame = AnyGame> {
   act(seat: Seat, action: unknown): string | null {
     if (this.disposed) return '牌桌已关闭';
     if (this.def.isOver(this.state)) return '本场已结束';
+    if (this.def.realtime && this.isAutomated(seat)) return '当前座位由电脑控制';
     if (seat !== SYSTEM_SEAT && !this.def.activeSeats(this.state).includes(seat)) {
       return '还没轮到你';
     }
@@ -143,6 +144,7 @@ export class Table<G extends AnyGame = AnyGame> {
     }
     if (err) return err;
     this.state = this.def.apply(this.state, seat, action);
+    if (this.def.realtime) return null;
     this.version++;
     if (this.thinkingSeats.size) {
       const stillActive = new Set(this.def.activeSeats(this.state));
@@ -271,6 +273,22 @@ export class Table<G extends AnyGame = AnyGame> {
    */
   private schedule(actedSeat: Seat | null): void {
     if (this.config.manual || this.disposed || !this.running) return;
+    const realtime = this.def.realtime;
+    if (realtime) {
+      if (this.systemTimer !== null || this.isOver()) return;
+      this.systemTimer = setTimer(() => {
+        this.systemTimer = null;
+        try {
+          this.state = realtime.step(this.state, this.seats.map((_, seat) => this.isAutomated(seat)));
+          this.version++;
+          this.emit();
+          this.schedule(null);
+        } catch (error) {
+          this.config.onError?.(error);
+        }
+      }, realtime.stepMs);
+      return;
+    }
     if (actedSeat !== null) this.clearSeatTimer(actedSeat);
     if (this.systemTimer) clearTimer(this.systemTimer);
     this.systemTimer = null;
@@ -413,6 +431,11 @@ export function simulate<G extends AnyGame>(
   });
   let steps = 0;
   while (!def.isOver(state) && steps < maxSteps) {
+    if (def.realtime) {
+      state = def.realtime.step(state, Array<boolean>(numPlayers).fill(true));
+      steps++;
+      continue;
+    }
     const active = def.activeSeats(state);
     if (active.length === 0) {
       const auto = def.autoAdvance?.(state);

@@ -6,6 +6,7 @@ import { ChessArt } from './chess/pieces';
 import { GemGuildArt } from './gemguild/art';
 import { HexArt } from './hexisle/art';
 import { OneCardArt } from './onecard/cards';
+import { SnakeArt } from './snake/art';
 import { SpellArt } from './spellstones/spells';
 import { XiangqiArt } from './xiangqi/pieces';
 
@@ -116,6 +117,14 @@ export const GAME_UIS: GameUI[] = [
     showcase: [],
     Art: GemGuildArt,
     people: '2–4 人',
+  },
+  {
+    id: 'snake',
+    Board: lazy(() => import('./snake/SnakeBoard')),
+    tint: ['#25446a', '#101d3a'],
+    showcase: [],
+    Art: SnakeArt,
+    people: '2–8 人 · 实时竞技',
   },
   {
     id: 'highcard',

@@ -4,7 +4,9 @@ import {
   BookOpen,
   Bot,
   ChevronLeft,
+  Maximize,
   MessageCircle,
+  Minimize,
   Palette,
   Smile,
   Volume2,
@@ -21,6 +23,7 @@ import { aiEvents, aiSpeech } from '../lib/ai/events';
 import { aiReady } from '../lib/ai/settings';
 import { characterName } from '../lib/ai/turn';
 import type { GameController } from '../lib/controller';
+import { toggleFullscreen, useFullscreen } from '../lib/fullscreen';
 import { online, useOnline } from '../lib/online';
 import { playSound } from '../lib/sound';
 import { settings } from '../lib/store';
@@ -61,6 +64,13 @@ export function TableShell({
   const [chatOpen, setChatOpen] = useState(false);
   const net = useOnline();
   const online_ = ctl.mode === 'online';
+  const fullscreen = useFullscreen();
+  const shell = useRef<HTMLDivElement>(null);
+  // 全屏：棋牌类不锁方向，跟着手机转；射击类（realtime）由玩法自己治理
+  const onFullscreen = () => {
+    if (ctl.def.realtime) return;
+    void toggleFullscreen(shell.current);
+  };
   // 人机局：聊天只在本地记录；被 AI 接管的电脑会偶尔发言，也会回应玩家
   const [localChat, setLocalChat] = useState<ChatMessage[]>([]);
   const chatMessages = online_ ? net.chat : localChat;
@@ -162,7 +172,11 @@ export function TableShell({
   const emotes = ctl.mode === 'online' ? net.emotes.filter((e) => Date.now() - e.at < 3500) : [];
 
   return (
-    <div className={ctl.def.realtime ? 'table table--arena' : 'table'} data-felt={s.felt}>
+    <div
+      ref={shell}
+      className={ctl.def.realtime ? 'table table--arena' : 'table'}
+      data-felt={s.felt}
+    >
       <header className="table__top">
         <div className="table__top-left">
           <IconButton label="返回" onClick={onBack}>
@@ -202,6 +216,15 @@ export function TableShell({
           >
             {s.sound ? <Volume2 size={19} /> : <VolumeX size={19} />}
           </IconButton>
+          {!ctl.def.realtime && (
+            <IconButton
+              label={fullscreen ? '退出全屏' : '全屏'}
+              active={fullscreen}
+              onClick={onFullscreen}
+            >
+              {fullscreen ? <Minimize size={19} /> : <Maximize size={19} />}
+            </IconButton>
+          )}
           <IconButton label="外观" onClick={() => setLook(true)}>
             <Palette size={19} />
           </IconButton>
@@ -228,7 +251,8 @@ export function TableShell({
 
       {ctl.auto && (
         <div className="auto-banner">
-          <Bot size={15} /> {ctl.def.realtime ? '托管中，电脑正在控制你的角色' : '托管中，电脑正在替你出牌'}
+          <Bot size={15} />{' '}
+          {ctl.def.realtime ? '托管中，电脑正在控制你的角色' : '托管中，电脑正在替你出牌'}
           <button onClick={() => ctl.setAuto(false)}>取消托管</button>
         </div>
       )}

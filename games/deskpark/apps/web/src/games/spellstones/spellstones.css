@@ -91,6 +91,91 @@
     0 0 10px 3px rgba(255, 232, 150, 0.8);
 }
 
+/* ---------------- 竖屏：对手收到图版上方的横带 ---------------- */
+/*
+ * 竖屏时左右两栏只有 (W - 图版宽) / 2，一排放 5~8 块石头的木架放不下，
+ * 整个会甩出视口。改成上方横带 + 两列网格，木架自己 wrap，永不横向溢出。
+ */
+.ss-strip {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+}
+.ss-opp.side-strip {
+  position: relative;
+  translate: none;
+  /* 每个格子均分横带宽度；内容再挤也只往下换行，绝不横向溢出 */
+  flex: 1 1 0;
+  max-width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+/* 横带格子很窄：座位名和生命指示物都允许压缩 / 换行，绝不能撑破格子 */
+.ss-opp.side-strip .seat {
+  max-width: 100%;
+  min-width: 0;
+  gap: 2px;
+}
+.ss-opp.side-strip .seat__meta {
+  min-width: 0;
+  max-width: 100%;
+}
+.ss-opp.side-strip .seat__name {
+  max-width: 3.6em;
+  font-size: 12px;
+}
+.ss-opp.side-strip .ss-sub {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1px 3px;
+  white-space: normal;
+}
+.ss-opp.side-strip .ss-sub__lv {
+  font-size: 10px;
+}
+/* 横带里石头缩小：5 块 × 18px 加内边距刚好塞进一个格子，真挤不下换行也不会溢出 */
+.ss-opp.side-strip .ss-rack {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1px;
+  min-height: 0;
+  padding: 2px 3px 4px;
+  max-width: 100%;
+}
+.ss-opp.side-strip .ss-rack .stone {
+  --sw: 18px;
+}
+.ss-opp.side-strip .ss-owls {
+  margin-left: 0;
+  padding-left: 3px;
+  gap: 1px;
+}
+.ss-opp.side-strip .ss-owls .stone {
+  --sw: 13px;
+}
+/* 横带最边上的格子只有 1/5 屏宽，气泡按内容撑开会顶出视口，改成按格子居中裁进宽度 */
+.ss-opp.side-strip .seat {
+  position: relative;
+}
+.ss-opp.side-strip .seat__bubble {
+  max-width: 128px;
+  white-space: normal;
+  text-align: center;
+}
+.ss-opp.side-strip .seat__bubble.side-bottom {
+  left: 50%;
+  translate: -50% 0;
+}
+
 /* ---------------- 施法特写 ---------------- */
 .ss-flash {
   position: absolute;
@@ -624,5 +709,106 @@
 @media (max-width: 720px) and (min-height: 501px) {
   .ss-spellbar {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ---------------- 竖屏窄屏：底部竖排，咒语栏占满整行 ---------------- */
+/*
+ * 横排时「自己 + 木架」把宽度吃掉一大半，8 格咒语栏每格只剩 20 多 px，
+ * 咒语名（魔法药水）会撑出视口。竖屏改成上下两段：咒语栏拿满整幅宽度、
+ * 排成 4 列 2 行，每格竖着放「石头 / 名字 / 概率条」，
+ * 名字有整格宽度可用，不会再被压成一条缝。
+ */
+@media (orientation: portrait) and (max-width: 620px) {
+  .ss__dock {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .ss__me {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .ss__me .ss-rack.is-mine {
+    flex-wrap: wrap;
+    min-height: 0;
+    padding: 3px 5px 5px;
+    max-width: 100%;
+  }
+  .ss__spells {
+    gap: 6px;
+  }
+  .ss__hint {
+    min-height: 0;
+    font-size: 12px;
+  }
+  .ss-spellbar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .ss-spell {
+    gap: 3px;
+    padding: 5px 3px 4px;
+  }
+  .ss-spell .stone {
+    --sw: 24px;
+  }
+  .ss-spell__text {
+    max-width: 100%;
+  }
+  .ss-spell__text b {
+    font-size: 11.5px;
+  }
+  /* 效果副标题在竖屏藏掉：点开魔法石还能看到完整说明 */
+  .ss-spell__text small {
+    display: none;
+  }
+  .ss-spell__odds {
+    width: 100%;
+    max-width: none;
+    height: 12px;
+  }
+  .ss-spell__odds em {
+    line-height: 12px;
+    font-size: 9.5px;
+  }
+  .ss-peek {
+    width: min(300px, calc(100vw - 24px));
+  }
+}
+
+/* 矮竖屏（320×568 这类）：底部再压一轮，别把图版挤没 */
+@media (orientation: portrait) and (max-width: 620px) and (max-height: 640px) {
+  .ss {
+    padding-bottom: 4px;
+  }
+  .ss__me .seat__name {
+    font-size: 13px;
+  }
+  .ss__me .ss-rack.is-mine {
+    padding: 2px 4px 4px;
+    gap: 1px;
+  }
+  .ss__hint {
+    font-size: 11px;
+  }
+  .ss-spellbar {
+    gap: 4px;
+  }
+  .ss-spell {
+    padding: 4px 2px 3px;
+  }
+  .ss-spell .stone {
+    --sw: 20px;
+  }
+  .ss-spell__text b {
+    font-size: 11px;
+  }
+  .ss-spell__odds em {
+    font-size: 9px;
+  }
+  .ss-opp.side-strip .ss-rack .stone {
+    --sw: 15px;
   }
 }

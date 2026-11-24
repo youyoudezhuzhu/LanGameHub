@@ -371,4 +371,72 @@
   .tx__felt {
     margin: 0 18px;
   }
+  /* 窄屏时左右两端座位贴着牌桌边，庄家 D 徽标（left: -14px）会探出视口 1px */
+  .tx__dealer {
+    left: -8px;
+  }
 }
+
+/* ---------- 竖屏窄屏：座位贴左右边竖排 ---------- */
+/*
+ * 椭圆排布在 390px 宽时左右座位会被甩出视口，所以窄竖屏改成
+ * 「左列 / 正中 / 右列」三档站位（pos() 里算），再用 translate 决定锚点，
+ * 这样不管胶囊座位多宽都不会溢出。牌桌本身收边距把宽度让出来。
+ */
+.tx__seat.is-narrow.at-left {
+  /* 往内让出 16px，庄家 D 徽标（left: -14px）和「赢」标签才不会被切 */
+  translate: 16px -50%;
+}
+.tx__seat.is-narrow.at-right {
+  translate: calc(-100% - 16px) -50%;
+}
+.tx__seat.is-narrow.at-mid {
+  translate: -50% -50%;
+}
+/* 竖排座位左右贴着牌桌边，亮牌一律挂在座位的上/下方，不往两边甩 */
+.tx__seat.is-narrow .tx__shown {
+  left: 50%;
+  translate: -50% 0;
+}
+/* 座位挨着边缘，气泡只朝牌桌内侧弹 */
+.tx__seat.is-narrow .seat__bubble.side-right {
+  left: 100%;
+}
+.tx__seat.is-narrow .seat__bubble.side-left {
+  right: 100%;
+}
+
+@media (orientation: portrait) and (max-width: 620px) {
+  .tx__felt {
+    margin: 0 4px;
+  }
+  .tx__oval {
+    inset: 9% 2% 6%;
+  }
+  .tx__seat .seat {
+    padding: 3px 9px 3px 3px;
+  }
+  /* 竖屏手牌位更紧，牌背缩小免得胶囊太宽 */
+  .tx__seat .tx__backs {
+    margin-left: 0;
+  }
+  .tx__seat .seat__meta {
+    min-width: 0;
+  }
+  .tx__seat .seat__name {
+    max-width: 5.2em;
+    font-size: 13.5px;
+  }
+  .tx__center {
+    gap: 6px;
+  }
+  .tx__pot {
+    gap: 6px;
+    font-size: 11px;
+  }
+  /* 底部自己的座位贴到视口左边，庄家 D 徽标往里收，避免探出屏幕 */
+  .tx__me .tx__dealer {
+    left: 0;
+  }
+}
+

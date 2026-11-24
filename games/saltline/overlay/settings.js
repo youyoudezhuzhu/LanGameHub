@@ -89,7 +89,8 @@ export function wireHubMenu(menu, open) {
   }
   const landscape = document.createElement('p');
   landscape.className = 'hub-landscape';
-  landscape.textContent = '建议横屏操作。请旋转手机。';
+  // 港区防线是射击玩法，只做横屏（其他棋牌玩法才支持竖屏）。
+  landscape.textContent = '本作只支持横屏，请把手机横过来。';
   menu.querySelector('.m-title-main').prepend(landscape);
   const params = new URLSearchParams(location.search);
   const code = params.get('room')?.toUpperCase();

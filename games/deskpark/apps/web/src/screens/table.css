@@ -61,21 +61,36 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  min-width: 0;
+}
+.table__top-right {
+  flex: none;
+}
+.table__top-left {
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 .table__title {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
   margin-left: 2px;
+  min-width: 0;
 }
 .table__title strong {
   font-size: 15px;
   font-weight: 650;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .table__title span {
   font-size: 11px;
   color: var(--felt-ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .board {
@@ -407,6 +422,24 @@
   color: var(--ink-3);
   text-align: center;
   margin-top: 10px;
+}
+
+/* 窄屏手机：顶栏图标挤成一排会超出 52px 的高度，收紧间距与按钮尺寸 */
+@media (max-width: 400px) {
+  .table__top .iconbtn {
+    width: 32px;
+    height: 32px;
+  }
+  .table__top-left,
+  .table__top-right {
+    gap: 0;
+  }
+  .table__title strong {
+    font-size: 14px;
+  }
+  .table__title span {
+    display: none;
+  }
 }
 
 /* 竖屏手机提示 */

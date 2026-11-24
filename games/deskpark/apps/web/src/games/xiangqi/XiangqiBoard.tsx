@@ -174,6 +174,7 @@ export default function XiangqiBoard({ ctl }: { ctl: Ctl }) {
     </div>
   );
 
+  // 侧栏上方（可滚）：对手、状态、导师、着法
   const side = (
     <>
       <PlayerCard
@@ -186,6 +187,11 @@ export default function XiangqiBoard({ ctl }: { ctl: Ctl }) {
       <div className={`duel-status ${status.cls}`}>{status.text}</div>
       {coach.eligible && !over && <CoachPanel coach={coach} myTurn={myTurn} onCommit={commit} />}
       <MoveList moves={v.moves.map((m) => m.text)} />
+    </>
+  );
+  // 侧栏底部（固定可见）：操作按钮 + 自己
+  const sideFoot = (
+    <>
       {!spectator && (
         <DuelActions
           showUndo={ctl.players[opp].isBot}
@@ -208,7 +214,7 @@ export default function XiangqiBoard({ ctl }: { ctl: Ctl }) {
 
   return (
     <>
-      <DuelLayout aspect={XQ_ASPECT} board={board} side={side} className="xb" />
+      <DuelLayout aspect={XQ_ASPECT} board={board} side={side} sideFoot={sideFoot} className="xb" />
       <DuelResult
         ctl={ctl}
         open={over && showResult}

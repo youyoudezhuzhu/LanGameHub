@@ -342,9 +342,10 @@
     0 0.3em 0.8em rgba(0, 0, 0, 0.25);
 }
 @keyframes occ-in {
+  /* 只做缩放淡入：矮屏（横屏手机）手牌紧贴视口底边，向下位移会直接溢出视口 */
   from {
     opacity: 0;
-    transform: translateY(45%) rotate(8deg);
+    transform: scale(0.86);
   }
 }
 
@@ -473,6 +474,9 @@
   inset: 0;
   z-index: 70;
   pointer-events: none;
+  /* 飞牌是按点击那一刻量的坐标做动画的，旋转屏幕后那一帧的坐标会落到视口外。
+   * 这是纯装饰动画（content 本身是隐藏的牌背），裁在视口内即可，不能让页面出现滚动条。 */
+  overflow: hidden;
 }
 .oc-flyer {
   position: absolute;

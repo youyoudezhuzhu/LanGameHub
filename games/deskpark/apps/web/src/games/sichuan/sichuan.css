@@ -788,7 +788,7 @@
 }
 @media (orientation: portrait) and (max-width: 600px) {
   .sc {
-    grid-template-columns: 64px minmax(0, 1fr) 64px;
+    grid-template-columns: 56px minmax(0, 1fr) 56px;
     padding: 18px 6px 6px;
   }
   .sc-act {
@@ -805,5 +805,62 @@
     left: 8px;
     right: 8px;
     width: auto;
+  }
+  /* 竖屏中央放不下「10 张宽」的十字牌桌：
+   * 原来 .sc-table 是固定 356px 宽（左右河流各 5 张、上下河流各 10 张），
+   * 而竖屏中列只有 220~270px，右侧河流直接跑到屏幕外。
+   * 这里把牌桌改成按中列宽度铺开，河流宽度跟随列宽换行——牌还是原来的大小，
+   * 只是上下河流从每行 10 张变成每行 4~5 张，多占几行（竖屏纵向空间够）。 */
+  .sc-table {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 5px;
+  }
+  .sc-river.is-top,
+  .sc-river.is-bottom,
+  .sc-river.is-left,
+  .sc-river.is-right {
+    width: 100%;
+    justify-content: center;
+  }
+  .sc-compass {
+    width: max(62px, calc(var(--rw) * 3));
+    height: max(62px, calc(var(--rw) * 3));
+  }
+  .sc-wall b {
+    font-size: max(16px, calc(var(--rw) * 0.8));
+  }
+  /* 左右两家的副标题在窄侧栏里放不下，藏掉（分数还在座位下方显示） */
+  .sc-seat.is-left .seat__meta,
+  .sc-seat.is-right .seat__meta {
+    display: none;
+  }
+  /* 右侧座位靠右对齐，「庄」角标默认挂在座位右侧会顶出屏幕 4px；
+   * 竖屏窄列里把它翻到左边，仍在座位范围内。 */
+  .sc-seat.is-right .seat__tag {
+    right: auto;
+    left: -10px;
+  }
+  /* 顶部信息条原来绝对定位压在「对家」座位上；竖屏给它单独一行，
+   * 顺序变成「信息条 → 对家 → 三家牌河 → 操作 → 手牌」，不再叠在一起。 */
+  .sc {
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'info info info'
+      'top top top'
+      'left center right'
+      'act act act'
+      'hand hand hand';
+  }
+  .sc-info {
+    grid-area: info;
+    position: static;
+    justify-self: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-bottom: 2px;
+  }
+  .sc-area.is-top {
+    margin-top: 6px;
   }
 }

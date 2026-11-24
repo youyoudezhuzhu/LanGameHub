@@ -31,7 +31,7 @@
 
 .lumen-hud {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: var(--lumen-top);
   left: var(--lumen-left);
   display: flex;
@@ -64,7 +64,7 @@
 }
 .lumen-countdown { background: #0b152d55; font-size: clamp(40px, 12dvh, 100px); font-weight: 800; }
 .lumen-respawn {
-  inset: auto auto max(32px, env(safe-area-inset-bottom)) 50%;
+  inset: auto auto max(10px, env(safe-area-inset-bottom)) 50%;
   translate: -50% 0;
   padding: 7px 13px;
   border-radius: 20px;
@@ -72,8 +72,12 @@
   font-size: 13px;
 }
 
+/* 横屏提示：默认不占位，只在竖屏时作为一句非阻断的说明露出 */
+.lumen-tip { display: none; }
+
 .lumen-controls {
   position: absolute;
+  z-index: 3;
   bottom: var(--lumen-bottom);
   left: var(--lumen-left);
   right: var(--lumen-right);
@@ -116,6 +120,7 @@
 
 .lumen-ranking {
   position: absolute;
+  z-index: 2;
   top: var(--lumen-top);
   right: var(--lumen-right);
   width: clamp(130px, 21vw, 215px);
@@ -146,10 +151,82 @@
 .lumen-rank__points, .lumen-rank__crashes { flex: none; font-variant-numeric: tabular-nums; }
 .lumen-rank__crashes { opacity: 0.7; min-width: 55px; text-align: right; }
 
-.lumen-result { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
+.lumen-result { position: absolute; z-index: 4; left: 50%; top: 50%; translate: -50% -50%; }
+/* ---------------- 竖屏：从上到下一列排开，操作区不再压住画布 ----------------
+ * HUD / 竞技场 / 排行榜 / 操作区 各占一行；canvas 按 64×32（2:1）居中收窄，
+ * 格子保持正方形，摇杆和加速键永远落在画布之外，拇指够得到。
+ */
 @media (orientation: portrait) {
-  .lumen-hud { max-width: calc(100% - var(--lumen-left) - var(--lumen-right) - clamp(130px, 21vw, 215px) - 8px); }
-  .lumen-ranking { max-height: min(26%, 225px); }
+  .lumen-arena {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: var(--lumen-top) var(--lumen-left) var(--lumen-bottom);
+  }
+  .lumen-hud { position: static; flex: none; max-width: 100%; }
+  /* 排行榜排到画面下方：不挡战场，也不挡操作；人多时自己滚 */
+  .lumen-ranking {
+    position: static;
+    flex: 0 1 auto;
+    order: 3;
+    width: auto;
+    min-height: 0;
+    max-height: min(24vh, 190px);
+  }
+  .lumen-field {
+    position: relative;
+    inset: auto;
+    order: 2;
+    /* 高度交给 canvas 的 2:1 比例，剩下的空白留给下方拇指区 */
+    flex: none;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    width: 100%;
+  }
+  .lumen-field__canvas {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #4d658c55;
+  }
+  /* 操作区贴底：弹性上边距把它压到屏幕底部，和排行榜分开 */
+  .lumen-controls {
+    position: static;
+    order: 5;
+    flex: none;
+    margin-top: auto;
+    padding-top: 10px;
+  }
+  .lumen-stick, .lumen-boost { width: clamp(78px, 19vh, 108px); }
+  .lumen-result { position: static; order: 6; translate: none; text-align: center; }
+  /* 竖屏本身是可玩的，这句只是锦上添花，不阻断操作 */
+  .lumen-tip {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    order: 4;
+    margin: 0;
+    font-size: 11px;
+    color: var(--lumen-muted);
+    opacity: 0.8;
+  }
+}
+
+/* 平板竖放（宽 ≥ 600px）：屏幕很高，把战场 + 排行榜整块垂直居中 */
+@media (orientation: portrait) and (min-width: 600px) {
+  .lumen-field { margin-top: auto; }
+  .lumen-ranking { margin-bottom: auto; }
+}
+
+/* 高一些的竖屏不需要横屏提示，位置留给排行榜和画面 */
+@media (orientation: portrait) and (min-height: 700px) {
+  .lumen-tip { display: none; }
 }
 @media (orientation: landscape) and (max-height: 360px) {
   .lumen-stick, .lumen-boost { width: 72px; }

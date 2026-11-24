@@ -2,7 +2,15 @@ import type { gg } from '@park/engine';
 import { gg as GG } from '@park/engine';
 import { Crown, Gem as GemIco, Layers } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { Avatar, Seat } from '../../components/Seat';
 import { Button, Sheet, toast } from '../../components/ui';
 import type { GameController } from '../../lib/controller';
@@ -48,6 +56,24 @@ function useStableSize(target: number): number {
     if (Math.abs(target - size) >= 2) setSize(Math.round(target));
   }, [target, size]);
   return Math.abs(target - size) >= 2 ? Math.round(target) : size;
+}
+
+/**
+ * 竖屏手机：侧栏移到牌桌下方（与 gemguild.css 的竖屏断点保持一致）。
+ * 注：没有用 lib/media 的 useViewport —— 它的 getSnapshot 每次都返回新对象，
+ * 放进 useSyncExternalStore 会一直重渲染。这里直接订阅同一条 media query。
+ */
+const NARROW_QUERY = '(orientation: portrait) and (max-width: 600px)';
+function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia(NARROW_QUERY);
+      m.addEventListener('change', cb);
+      return () => m.removeEventListener('change', cb);
+    },
+    () => window.matchMedia(NARROW_QUERY).matches,
+    () => false,
+  );
 }
 
 /** 持有的宝石与折扣：每种颜色一列（折扣牌在上，宝石在下） */
@@ -100,9 +126,20 @@ export default function GemBoard({ ctl }: { ctl: Ctl }) {
     return !err;
   };
 
+  // 竖屏手机：侧栏在牌桌下方（与 gemguild.css 的竖屏断点保持一致）
+  const narrow = useNarrow();
+
   // ---- 尺寸：按可用空间算牌宽 ----
   const [tableRef, box] = useBox();
-  const cw = useStableSize(Math.max(40, Math.min(200, box.w / 6.4, box.h / 5.5)));
+  // 竖屏时供应区改成横排一条（见 gemguild.css），牌桌只剩 5 列牌，宽度系数从 6.4 收到 5.9；
+  // 高度方向还要放下「筹码条 + 贵族 + 三行牌」，所以高度系数从 5.5 放到 6.4。
+  // 极窄屏（320px 宽 / 矮屏）如果把 40px 作为下限会顶出牌桌，这里下限收到 34px。
+  const cw = useStableSize(
+    Math.max(
+      narrow ? 34 : 40,
+      Math.min(200, box.w / (narrow ? 5.9 : 6.4), box.h / (narrow ? 6.4 : 5.5)),
+    ),
+  );
 
   // ---- 拿宝石：点供应区的筹码挑选 ----
   const [sel, setSel] = useState<Gem[]>([]);
@@ -313,6 +350,11 @@ export default function GemBoard({ ctl }: { ctl: Ctl }) {
     (s) => s !== me || spectator,
   );
   const tw = `${Math.round(cw * 0.6)}px`;
+  // 竖屏时日志单独一条横贯整宽（侧栏里那列不显示）
+  const logItems = [...v.events]
+    .reverse()
+    .slice(0, 6)
+    .map((e) => <li key={e.seq}>{eventText(e)}</li>);
 
   return (
     <div className="gg" ref={rootRef} style={{ '--k': scale, '--cw': `${cw}px` } as CSSProperties}>
@@ -464,7 +506,7 @@ export default function GemBoard({ ctl }: { ctl: Ctl }) {
               </div>
             );
           })}
-          {!compact && (
+          {!compact && !narrow && (
             <ol className="gg-log">
               {[...v.events]
                 .reverse()
@@ -477,6 +519,8 @@ export default function GemBoard({ ctl }: { ctl: Ctl }) {
         </aside>
       </div>
 
+      {!compact && narrow && <ol className="gg-log gg-log--strip">{logItems}</ol>}
+
       {!spectator && (
         <div className={`gg__dock ${myTurn ? 'is-turn' : ''}`} data-player={me}>
           <div className="gg-me">
@@ -484,7 +528,7 @@ export default function GemBoard({ ctl }: { ctl: Ctl }) {
               player={ctl.players[me]}
               active={myTurn}
               deadline={ctl.deadlines[me]}
-              size={46}
+              size={narrow && !compact ? 34 : 46}
               layout="row"
               figureOverflow
               sub={
@@ -499,7 +543,10 @@ export default function GemBoard({ ctl }: { ctl: Ctl }) {
               <small>声望</small>
             </span>
           </div>
-          <Holdings p={mine} size={compact ? '26px' : 'calc(34px * var(--k, 1))'} />
+          <Holdings
+            p={mine}
+            size={compact ? '26px' : narrow ? '24px' : 'calc(34px * var(--k, 1))'}
+          />
           <div className="gg-me__reserved">
             {mine.reserved.map((c) =>
               c ? (
@@ -763,8 +810,13 @@ function FlyNode({ f, onDone }: { f: Flyer; onDone: (key: string) => void }) {
     const el = ref.current;
     if (!el) return;
     const w = el.offsetWidth || f.from.width;
-    const dx = f.to.left + f.to.width / 2 - (f.from.left + f.from.width / 2);
-    const dy = f.to.top + f.to.height / 2 - (f.from.top + f.from.height / 2);
+    // 竖屏时对手条是横滑的，滚动到屏外的座位 rect 在视口右边以外；
+    // 飞行动画的落点夹回视口内，免得牌/筹码飞出屏幕边缘。
+    const pad = 10;
+    const tx = Math.min(window.innerWidth - pad, Math.max(pad, f.to.left + f.to.width / 2));
+    const ty = Math.min(window.innerHeight - pad, Math.max(pad, f.to.top + f.to.height / 2));
+    const dx = tx - (f.from.left + f.from.width / 2);
+    const dy = ty - (f.from.top + f.from.height / 2);
     const end = Math.max(0.25, Math.min(1, 40 / w));
     const anim = el.animate(
       [

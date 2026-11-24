@@ -6,3 +6,5 @@ build/
 local.properties
 .tools/
 *.apk
+.npm-cache/
+.work/

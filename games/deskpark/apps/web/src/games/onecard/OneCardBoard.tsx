@@ -218,6 +218,18 @@ export default function OneCardBoard({ ctl }: { ctl: Ctl }) {
     [],
   );
 
+  // 飞牌是按出事那一刻量的坐标做动画的；旋转屏幕后那些坐标会落到新视口之外。
+  // 这是纯装饰动画，直接清掉，别让它在屏幕上乱飞。
+  useEffect(() => {
+    const clear = () => setFlyers([]);
+    window.addEventListener('resize', clear);
+    window.addEventListener('orientationchange', clear);
+    return () => {
+      window.removeEventListener('resize', clear);
+      window.removeEventListener('orientationchange', clear);
+    };
+  }, []);
+
   // ---- 每位玩家的最新动作气泡 ----
   const bubbleOf = (s: number): string | undefined => {
     if (v.phase !== 'play') return undefined;

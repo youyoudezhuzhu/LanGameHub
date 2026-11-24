@@ -1,6 +1,6 @@
 import type { mj as MJ } from '@park/engine';
 import { Rng, mj, sc } from '@park/engine';
-import { GraduationCap, RotateCw } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MahjongTile, SuitBadge } from '../../components/MahjongTile';
@@ -370,9 +370,6 @@ export default function SichuanBoard({ ctl }: { ctl: Ctl }) {
       ref={rootRef}
       style={{ '--tw': `${tw}px` } as CSSProperties}
     >
-      <div className="rotate-tip">
-        <RotateCw size={12} /> 横屏体验更佳
-      </div>
       <div className="sc-info info-chips top-info">
         <span className="chip">
           第 <b className="num">{v.round}</b>

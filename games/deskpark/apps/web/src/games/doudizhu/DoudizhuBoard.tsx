@@ -1,6 +1,5 @@
 import type { Card } from '@park/engine';
 import { Rng, ddz } from '@park/engine';
-import { RotateCw } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { CardRow, Hand } from '../../components/Hand';
 import { PlayingCard } from '../../components/PlayingCard';
@@ -164,9 +163,6 @@ export default function DoudizhuBoard({ ctl }: { ctl: Ctl }) {
 
   return (
     <div className="ddz">
-      <div className="rotate-tip">
-        <RotateCw size={12} /> 横屏体验更佳
-      </div>
       <div className="ddz__info">
         <div className="ddz__bottom">
           {v.bottom

@@ -1,6 +1,5 @@
 import type { Card } from '@park/engine';
 import { Rng, gd } from '@park/engine';
-import { RotateCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { CardRow, Hand } from '../../components/Hand';
 import { PlayingCard } from '../../components/PlayingCard';
@@ -121,9 +120,6 @@ export default function GuandanBoard({ ctl }: { ctl: Ctl }) {
 
   return (
     <div className="gd">
-      <div className="rotate-tip">
-        <RotateCw size={12} /> 横屏体验更佳
-      </div>
       <div className="gd__info info-chips top-info">
         <span className="chip">
           第 <b className="num">{v.round}</b> 局

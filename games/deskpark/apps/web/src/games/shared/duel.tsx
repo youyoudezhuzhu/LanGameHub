@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Seat } from '../../components/Seat';
 import { Button, Sheet } from '../../components/ui';
 import type { GameController } from '../../lib/controller';
-import { useSeatScale } from '../../lib/media';
+import { usePortrait, useSeatScale } from '../../lib/media';
 import { playSound } from '../../lib/sound';
 import { useCompact } from './trick';
 import './duel.css';
@@ -12,6 +12,10 @@ import './duel.css';
 /**
  * 双人棋类的通用布局：棋盘 + 右侧栏（对手、着法、操作、自己）。
  * 棋盘的大小只取决于可用空间和固定宽度的侧栏，不会和内容互相影响。
+ *
+ * 竖屏手机放不下「棋盘 + 侧栏」的横排，所以窄竖屏改成上下堆叠：
+ * 棋盘占上方（按可用宽高求出最大边长），侧栏落到下方、自己可滚。
+ * 横屏 / 平板 / 桌面仍然是原来的横排，`compact`（矮屏）分支行为不变。
  */
 
 function useBox() {
@@ -37,37 +41,68 @@ export function DuelLayout({
   aspect,
   board,
   side,
+  sideFoot,
   className = '',
 }: {
   /** 棋盘宽高比 */
   aspect: number;
   board: ReactNode;
   side: ReactNode;
+  /** 侧栏底部固定区（操作按钮、自己的信息卡），竖屏堆叠时不会被滚动区藏起来 */
+  sideFoot?: ReactNode;
   className?: string;
 }) {
+  const portrait = usePortrait();
   const compact = useCompact();
   const k = useSeatScale();
   const [ref, box] = useBox();
   const sideW = compact ? 230 : Math.round(Math.min(340, Math.max(270, box.w * 0.24)) * k);
   const gap = compact ? 10 : 22;
-  const h = Math.max(0, Math.min(box.h, (box.w - sideW - gap) / aspect));
-  const w = Math.floor(h * aspect);
+  // 横排时留给棋盘的总宽度
+  const rowRoom = box.w - sideW - gap;
+  // 竖屏且横排放不下像样的棋盘（窄手机）→ 上下堆叠；
+  // 平板竖屏（768px 起）横排仍然够用，保持原样；横屏永远不会进这个分支
+  const stack = portrait && box.w > 0 && (compact || rowRoom < 300);
+
+  // 横排（原逻辑，不能退化）
+  const rowH = Math.max(0, Math.min(box.h, rowRoom / aspect));
+  const rowW = Math.floor(rowH * aspect);
+
+  // 堆叠：侧栏至少留出能看见对手卡 + 按钮的高度，剩下全给棋盘
+  const stackGap = 10;
+  const sideMin = Math.max(170, Math.min(420, Math.round(box.h * 0.42)));
+  const stackW = Math.floor(Math.min(box.w, Math.max(0, box.h - stackGap - sideMin) * aspect));
+  const stackH = stackW / aspect;
+  const stackSideH = Math.max(0, box.h - stackH - stackGap);
+
   return (
     <div className={`duel ${className}`} style={{ '--k': k } as CSSProperties}>
       <div className="duel__arena" ref={ref}>
-        {box.w > 0 && (
-          <div className="duel__row" style={{ gap }}>
-            <div className="duel__board" style={{ width: w }}>
-              {board}
+        {box.w > 0 &&
+          (stack ? (
+            <div className="duel__stack" style={{ gap: stackGap }}>
+              <div className="duel__board" style={{ width: stackW }}>
+                {board}
+              </div>
+              <div className="duel__side duel__side--stack" style={{ height: stackSideH }}>
+                <div className="duel__scroll">{side}</div>
+                {sideFoot && <div className="duel__foot">{sideFoot}</div>}
+              </div>
             </div>
-            <aside
-              className="duel__side"
-              style={{ width: sideW, height: Math.max(h, compact ? 0 : 420) }}
-            >
-              {side}
-            </aside>
-          </div>
-        )}
+          ) : (
+            <div className="duel__row" style={{ gap }}>
+              <div className="duel__board" style={{ width: rowW }}>
+                {board}
+              </div>
+              <aside
+                className="duel__side"
+                style={{ width: sideW, height: Math.max(rowH, compact ? 0 : 420) }}
+              >
+                {side}
+                {sideFoot}
+              </aside>
+            </div>
+          ))}
       </div>
     </div>
   );

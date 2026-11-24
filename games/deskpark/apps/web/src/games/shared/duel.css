@@ -29,6 +29,56 @@
   min-height: 0;
 }
 
+/* 竖屏窄屏：棋盘在上、侧栏在下（棋盘大小在 JS 里按可用宽高算） */
+.duel__stack {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+}
+.duel__stack > .duel__board {
+  flex: none;
+}
+.duel__side--stack {
+  width: 100%;
+  overflow: hidden;
+}
+/* 侧栏上方内容可滚（着法多的时候），底部操作区固定可见 */
+.duel__scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+.duel__foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* 堆叠时整个侧栏共用外层滚动：着法和导师都按内容展开，避免嵌套滚动 */
+.duel__side--stack .duel__scroll > * {
+  flex: none;
+}
+/* 着法自己限高并跟到最新一手，避免几十步后把状态卡和按钮挤得太远 */
+.duel__side--stack .duel-moves {
+  flex: none;
+  max-height: 132px;
+}
+.duel__side--stack .coach {
+  max-height: none;
+}
+.duel__side--stack .coach__body {
+  overflow: visible;
+}
+
 /* 玩家卡片 */
 .duel-card {
   display: flex;

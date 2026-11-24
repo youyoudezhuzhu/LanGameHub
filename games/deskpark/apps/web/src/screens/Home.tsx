@@ -1,7 +1,16 @@
 import type { AnyGame, GameCategory } from '@park/engine';
 import { getGame } from '@park/engine';
 import { normalizeRoomCode } from '@park/protocol';
-import { ArrowRight, Gamepad2, Play, Radio, Settings2, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  Gamepad2,
+  Maximize,
+  Minimize,
+  Play,
+  Radio,
+  Settings2,
+  Users,
+} from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { PlayingCard } from '../components/PlayingCard';
@@ -11,6 +20,7 @@ import { Button, IconButton } from '../components/ui';
 import type { GameUI } from '../games';
 import { GAME_UIS } from '../games';
 import { clearSavedLocal, loadSavedLocal } from '../lib/controller';
+import { toggleFullscreen, useFullscreen } from '../lib/fullscreen';
 import { online, useOnline } from '../lib/online';
 import { navigate } from '../lib/router';
 import { profile } from '../lib/store';
@@ -111,23 +121,34 @@ function GameTile({
 export function Home() {
   const p = profile.use();
   const net = useOnline();
+  const fullscreen = useFullscreen();
   const [setup, setSetup] = useState<{ gameId: string; mode: 'local' | 'online' } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [code, setCode] = useState('');
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
-  const [counts, setCounts] = useState<{ clients: number; rooms: number; pvz?: { version: string }; saltline?: { revision: string } } | null>(null);
+  const [counts, setCounts] = useState<{
+    clients: number;
+    rooms: number;
+    pvz?: { version: string };
+    saltline?: { revision: string };
+  } | null>(null);
   useEffect(() => {
     online.connect();
     const controller = new AbortController();
     const update = () => {
       void fetch('/api/status', { signal: controller.signal })
-        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((response) => (response.ok ? response.json() : Promise.reject()))
         .then((value) => setCounts(value))
-        .catch(() => { if (!controller.signal.aborted) setCounts(null); });
+        .catch(() => {
+          if (!controller.signal.aborted) setCounts(null);
+        });
     };
     update();
     const interval = window.setInterval(update, 4000);
-    return () => { clearInterval(interval); controller.abort(); };
+    return () => {
+      clearInterval(interval);
+      controller.abort();
+    };
   }, []);
   const resume = GAME_UIS.map((g) => (loadSavedLocal(g.id) ? g.id : null)).find(Boolean) ?? null;
   const resumeDef = resume ? getGame(resume) : null;
@@ -157,7 +178,9 @@ export function Home() {
     <div className="home">
       <header className="home__top">
         <div className="brand">
-          <span className="hub-mark"><Gamepad2 size={22} /></span>
+          <span className="hub-mark">
+            <Gamepad2 size={22} />
+          </span>
           <span className="brand__text">
             <strong>LAN Game Hub</strong>
             <small>局域网游戏大厅</small>
@@ -168,6 +191,13 @@ export function Home() {
             <Avatar name={p.name} avatar={p.avatar} size={28} />
             <span>{p.name}</span>
           </button>
+          <IconButton
+            label={fullscreen ? '退出全屏' : '全屏'}
+            active={fullscreen}
+            onClick={() => void toggleFullscreen(document.documentElement)}
+          >
+            {fullscreen ? <Minimize size={19} /> : <Maximize size={19} />}
+          </IconButton>
           <IconButton label="设置" onClick={() => setSettingsOpen(true)}>
             <Settings2 size={19} />
           </IconButton>
@@ -180,9 +210,19 @@ export function Home() {
             <Radio size={15} />
             {counts ? `${counts.clients} 人在线 · ${counts.rooms} 个房间` : '正在连接主机'}
           </span>
-          <h1>同一个局域网，<br />来一局。</h1>
+          <h1>
+            同一个局域网，
+            <br />
+            来一局。
+          </h1>
           <p>选个游戏开桌，或用好友的房间码直接加入。</p>
-          <form className="join" onSubmit={(event) => { event.preventDefault(); join(); }}>
+          <form
+            className="join"
+            onSubmit={(event) => {
+              event.preventDefault();
+              join();
+            }}
+          >
             <input
               value={code}
               onChange={(event) => setCode(normalizeRoomCode(event.target.value))}
@@ -249,10 +289,23 @@ export function Home() {
       )}
 
       <div className="hub-library">
-        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, Number(!!counts?.pvz) + Number(!!counts?.saltline))} 款游戏</p></div>
+        <div>
+          <h2>游戏库</h2>
+          <p>
+            {groups.reduce(
+              (count, group) => count + group.games.length,
+              Number(!!counts?.pvz) + Number(!!counts?.saltline),
+            )}{' '}
+            款游戏
+          </p>
+        </div>
         <div className="hub-filters" role="group" aria-label="游戏分类">
           {[{ id: 'all' as const, title: '全部' }, ...CATEGORIES].map((item) => (
-            <button key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
+            <button
+              key={item.id}
+              aria-pressed={category === item.id}
+              onClick={() => setCategory(item.id)}
+            >
               {item.title}
             </button>
           ))}
@@ -265,26 +318,42 @@ export function Home() {
             {group.games.map(tile)}
             {group.id === 'arcade' && counts?.saltline && (
               <article className="gtile">
-                <div className="gtile__art saltline-tile-art" aria-hidden="true"><Gamepad2 size={42} /></div>
+                <div className="gtile__art saltline-tile-art" aria-hidden="true">
+                  <Gamepad2 size={42} />
+                </div>
                 <div className="gtile__body">
-                  <div className="gtile__head"><h3>Saltline</h3></div>
+                  <div className="gtile__head">
+                    <h3>Saltline</h3>
+                  </div>
                   <p className="gtile__tagline">港区行动 · 单人任务、合作和团队对抗</p>
                   <div className="gtile__actions">
-                    <a className="btn btn--primary btn--sm" href="/games/saltline/"><Play size={14} /> 进入</a>
-                    <a className="btn btn--sm" href="/games/saltline/?action=host">创建房间</a>
-                    <a className="btn btn--sm" href="/games/saltline/?action=join">加入房间</a>
+                    <a className="btn btn--primary btn--sm" href="/games/saltline/">
+                      <Play size={14} /> 进入
+                    </a>
+                    <a className="btn btn--sm" href="/games/saltline/?action=host">
+                      创建房间
+                    </a>
+                    <a className="btn btn--sm" href="/games/saltline/?action=join">
+                      加入房间
+                    </a>
                   </div>
                 </div>
               </article>
             )}
             {group.id === 'arcade' && counts?.pvz && (
               <article className="gtile">
-                <div className="gtile__art pvz-tile-art" aria-hidden="true"><Gamepad2 size={42} /></div>
+                <div className="gtile__art pvz-tile-art" aria-hidden="true">
+                  <Gamepad2 size={42} />
+                </div>
                 <div className="gtile__body">
-                  <div className="gtile__head"><h3>pvz_perf</h3></div>
+                  <div className="gtile__head">
+                    <h3>pvz_perf</h3>
+                  </div>
                   <p className="gtile__tagline">已导入的离线塔防 · {counts.pvz.version}</p>
                   <div className="gtile__actions">
-                    <a className="btn btn--primary btn--sm" href="/games/pvz/"><Play size={14} /> 单人</a>
+                    <a className="btn btn--primary btn--sm" href="/games/pvz/">
+                      <Play size={14} /> 单人
+                    </a>
                   </div>
                 </div>
               </article>
@@ -294,7 +363,8 @@ export function Home() {
       ))}
 
       <footer className="home__foot">
-        <span>LAN Game Hub</span><span>桌游引擎由 DeskPark 提供</span>
+        <span>LAN Game Hub</span>
+        <span>桌游引擎由 DeskPark 提供</span>
       </footer>
 
       {setup && (

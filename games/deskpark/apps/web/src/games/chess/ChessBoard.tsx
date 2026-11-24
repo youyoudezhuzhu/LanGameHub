@@ -270,6 +270,7 @@ export default function ChessBoard({ ctl }: { ctl: Ctl }) {
     </div>
   );
 
+  // 侧栏上方（可滚）：对手、状态、导师、着法
   const side = (
     <>
       <PlayerCard
@@ -282,6 +283,12 @@ export default function ChessBoard({ ctl }: { ctl: Ctl }) {
       <div className={`duel-status ${status.cls}`}>{status.text}</div>
       {coach.eligible && !over && <CoachPanel coach={coach} myTurn={myTurn} onCommit={commit} />}
       <MoveList moves={v.moves.map((m) => m.san)} />
+    </>
+  );
+
+  // 侧栏底部（固定可见）：操作按钮 + 自己，竖屏堆叠时不会被滚出屏幕
+  const sideFoot = (
+    <>
       {!spectator && (
         <DuelActions
           showUndo={ctl.players[opp].isBot}
@@ -304,7 +311,7 @@ export default function ChessBoard({ ctl }: { ctl: Ctl }) {
 
   return (
     <>
-      <DuelLayout aspect={1} board={board} side={side} className="cb" />
+      <DuelLayout aspect={1} board={board} side={side} sideFoot={sideFoot} className="cb" />
       <DuelResult
         ctl={ctl}
         open={over && showResult}

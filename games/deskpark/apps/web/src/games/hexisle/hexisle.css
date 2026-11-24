@@ -616,6 +616,121 @@
   color: var(--ink-2);
 }
 
+/* ---------------- 竖屏手机：侧栏下移成两列，地图拿满宽度 ----------------
+ * 侧栏原来是右侧固定宽，390px 竖屏时会把地图挤到 120px 左右，
+ * 所以竖屏改成「地图在上、玩家两列在下」，地图接近整宽。
+ */
+@media (orientation: portrait) and (max-width: 600px) {
+  .hi {
+    gap: 5px;
+    padding: 2px 10px 8px;
+  }
+  .hi__main {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hi__board {
+    flex: 1 1 auto;
+    min-height: 200px;
+  }
+  .hi__side {
+    flex: none;
+    width: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+    gap: 6px;
+    overflow: visible;
+  }
+  .hi-player {
+    padding: 5px 8px 5px 10px;
+    gap: 2px 4px;
+  }
+  .hi-player::before {
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+  }
+  .hi-player__vp b {
+    font-size: 19px;
+  }
+  .hi-player__stats {
+    flex-wrap: wrap;
+    gap: 2px 5px;
+  }
+  /* 日志横贯整行，限高可滚动（体检允许滚动容器内的内容，别用 display:none 藏掉） */
+  .hi__side .hi-log {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 6px 10px 6px 22px;
+    max-height: 3.4em;
+    overflow-y: auto;
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+  .hi-dice {
+    left: 4px;
+    top: 4px;
+    padding: 4px 8px;
+  }
+  /* 手牌与按钮各占一行，避免加发展卡时横向溢出 */
+  .hi__dock {
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 6px;
+    min-height: 0;
+  }
+  .hi-hand {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .hi-actions {
+    flex: 1 1 100%;
+    gap: 4px;
+  }
+  .hi-actions .action-hint {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .hi-actions__row {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .hi-builds {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .hi-build {
+    padding: 4px 7px 5px;
+  }
+  .hi-build__name {
+    font-size: 11.5px;
+  }
+}
+
+/* 320px 这类极窄屏：两列玩家卡每格只剩 ~145px，四项统计（固定 99px）会顶出屏幕右边 */
+@media (orientation: portrait) and (max-width: 380px) {
+  .hi__side {
+    gap: 5px;
+  }
+  .hi-player {
+    padding: 5px 6px 5px 9px;
+    gap: 2px 3px;
+  }
+  .hi-player__vp b {
+    font-size: 17px;
+  }
+  .hi-player__stats {
+    gap: 3px;
+    font-size: 11px;
+  }
+  .hi-player__stats svg {
+    width: 10px;
+    height: 10px;
+  }
+}
+
 /* ---------------- 矮屏（横屏手机） ---------------- */
 @media (max-height: 500px) {
   .hi {

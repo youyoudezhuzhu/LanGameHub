@@ -1,15 +1,31 @@
 import { tx } from '@park/engine';
 import type { CSSProperties } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PlayingCard } from '../../components/PlayingCard';
 import { Avatar, Seat } from '../../components/Seat';
 import { Button, Sheet, toast } from '../../components/ui';
 import type { GameController } from '../../lib/controller';
 import { useFigureLookup } from '../../lib/characters';
 import { formatChips, signed } from '../../lib/format';
+import { usePortrait } from '../../lib/media';
 import { playSound } from '../../lib/sound';
 import { useCompact, useTurnCue } from '../shared/trick';
 import './texas.css';
+
+/** 监听根节点宽度（旋转 / 缩放即时更新），窄屏判断用 */
+function useWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [w, setW] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width));
+    ro.observe(el);
+    setW(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w] as const;
+}
 
 type Ctl = GameController<tx.TxView, tx.TxAction>;
 
@@ -50,6 +66,10 @@ export default function TexasBoard({ ctl }: { ctl: Ctl }) {
   const myTurn = !spectator && !!v.me;
   const [raiseOpen, setRaiseOpen] = useState(false);
   const compact = useCompact();
+  const portrait = usePortrait();
+  const [rootRef, width] = useWidth<HTMLDivElement>();
+  // 竖屏窄屏：椭圆排布会把两侧座位甩出视口，改成贴左右边的竖排紧凑座位
+  const narrow = portrait && width > 0 && width <= 620;
   const figureOf = useFigureLookup();
   const [raiseTo, setRaiseTo] = useState(0);
   useTurnCue(myTurn);
@@ -87,11 +107,24 @@ export default function TexasBoard({ ctl }: { ctl: Ctl }) {
     return tx.handName(tx.scoreHand([...mine.hole, ...v.board]));
   }, [mine.hole, v.board]);
 
-  // 座位分布在椭圆上，自己在正下方，顺时针为下家
+  // 座位分布在椭圆上，自己在正下方，顺时针为下家。
+  // 竖屏窄屏时椭圆横向半径只有 ±47%，胶囊座位会被甩出屏幕：
+  // 改成「左右两条竖排 + 正上/正下方」，座位贴着牌桌左右边，
+  // 再用 translate 锚点决定往哪边展开，座位再宽也不会溢出视口。
   const pos = (s: number) => {
     const k = (s - me + n) % n;
     const a = ((90 + (k * 360) / n) * Math.PI) / 180;
-    return { x: 50 + 47 * Math.cos(a), y: 50 + 44 * Math.sin(a), a };
+    const sin = Math.sin(a);
+    const cos = Math.cos(a);
+    if (narrow) {
+      // 竖排时上下半径略收，8 人局正上方那位不会被信息栏切到
+      const y = Math.max(10, Math.min(90, 50 + 40 * sin));
+      if (Math.abs(cos) > 0.26) {
+        return { x: cos < 0 ? 0 : 100, y, a, anchor: cos < 0 ? 'left' : 'right' };
+      }
+      return { x: 50, y, a, anchor: 'mid' };
+    }
+    return { x: 50 + 47 * cos, y: 50 + 44 * sin, a, anchor: 'mid' };
   };
 
   const opts = v.me;
@@ -113,7 +146,7 @@ export default function TexasBoard({ ctl }: { ctl: Ctl }) {
   };
 
   return (
-    <div className="tx">
+    <div className="tx" ref={rootRef}>
       <div className="tx__info info-chips top-info">
         <span className="chip">
           第 <b className="num">{v.handNo}</b> 手
@@ -182,19 +215,20 @@ export default function TexasBoard({ ctl }: { ctl: Ctl }) {
 
         {v.players.map((p, s) => {
           if (s === me && !spectator) return null;
-          const { x, y: y0, a } = pos(s);
+          const { x, y: y0, a, anchor } = pos(s);
           // 全身立绘的头部会探出座位上沿，顶部座位下移，避免压到信息栏
           const y =
             y0 < 20 && figureOf(ctl.players[s].avatar, ctl.players[s].name)
               ? y0 + (compact ? 9 : 13)
               : y0;
           const h = shown.get(s);
-          const side = x < 50 ? 'right' : 'left';
+          // 气泡朝牌桌内侧弹：竖排座位贴着左右边，朝外会顶出视口
+          const side = narrow ? (anchor === 'left' ? 'right' : 'left') : x < 50 ? 'right' : 'left';
           const below = y < 50;
           return (
             <div key={s}>
               <div
-                className={`tx__seat ${p.out ? 'is-out' : ''} ${below ? 'is-upper' : 'is-lower'} ${x <= 50 ? 'on-left' : 'on-right'}`}
+                className={`tx__seat ${p.out ? 'is-out' : ''} ${below ? 'is-upper' : 'is-lower'} ${x <= 50 ? 'on-left' : 'on-right'} ${narrow ? `is-narrow at-${anchor}` : ''}`}
                 style={{ left: `${x}%`, top: `${y}%` }}
               >
                 <Seat
@@ -245,13 +279,16 @@ export default function TexasBoard({ ctl }: { ctl: Ctl }) {
                 <div
                   className="tx__bet"
                   style={
-                    compact && y !== y0
-                      ? // 矮屏上顶部座位已下移，筹码放到座位左侧，避免压住底池
-                        { left: `calc(${x}% - 104px)`, top: `calc(${y}% + 8px)` }
-                      : {
-                          left: `calc(${x}% - ${Math.cos(a) * (compact ? 112 : 140)}px)`,
-                          top: `calc(${y}% - ${Math.sin(a) * (compact ? 40 : 58) + (below ? -1 : 1) * (compact ? 14 : 10)}px)`,
-                        }
+                    narrow
+                      ? // 竖排座位：筹码沿牌桌内侧摆，位置固定不随角度飞出
+                        { left: `calc(${x}% ${anchor === 'left' ? '+' : '-'} 34px)`, top: `${y}%` }
+                      : compact && y !== y0
+                        ? // 矮屏上顶部座位已下移，筹码放到座位左侧，避免压住底池
+                          { left: `calc(${x}% - 104px)`, top: `calc(${y}% + 8px)` }
+                        : {
+                            left: `calc(${x}% - ${Math.cos(a) * (compact ? 112 : 140)}px)`,
+                            top: `calc(${y}% - ${Math.sin(a) * (compact ? 40 : 58) + (below ? -1 : 1) * (compact ? 14 : 10)}px)`,
+                          }
                   }
                 >
                   <Chips amount={p.bet} />

@@ -7,10 +7,9 @@ import { Seat } from '../../components/Seat';
 import { Button, Sheet, toast } from '../../components/ui';
 import type { GameController } from '../../lib/controller';
 import { signed } from '../../lib/format';
-import { useSeatScale } from '../../lib/media';
+import { useSeatScale, usePortrait } from '../../lib/media';
 import { playSound } from '../../lib/sound';
-import { useCompact, useTurnCue } from '../shared/trick';
-import { BOARD_ART, LifeTokens, SPELL_UI, Stone, Wizard } from './spells';
+import { useCompact, useTurnCue } from '../shared/trick';import { BOARD_ART, LifeTokens, SPELL_UI, Stone, Wizard } from './spells';
 import './spellstones.css';
 
 type Ctl = GameController<ss.SsView, ss.SsAction>;
@@ -47,7 +46,7 @@ const CASTLE: readonly (readonly [number, number])[] = [
 ];
 
 /* ---------------- 座位排布 ---------------- */
-type Side = 'top' | 'left' | 'right';
+type Side = 'top' | 'left' | 'right' | 'strip';
 interface Slot {
   side: Side;
   /** 侧边座位的垂直位置（占牌桌高度的比例） */
@@ -64,6 +63,12 @@ function slotsFor(k: number, compact: boolean): Slot[] {
   if (k === 3) return compact ? [L(0.78), L(0.22), R(0.45)] : [L(0.58), T, R(0.58)];
   return compact ? [L(0.78), L(0.22), R(0.22), R(0.78)] : [L(0.74), L(0.26), R(0.26), R(0.74)];
 }
+
+/**
+ * 竖屏：左右两栏只有 (W - 图版宽) / 2 的空间，一排放 5~8 块石头的木架
+ * （实测约 230px）必然溢出视口。所以竖屏把对手全部收到图版上方的一条横带里，
+ * 木架宽度靠 CSS 的 flex-wrap 兜底，绝不可能横向溢出。
+ */
 
 /** 监听元素尺寸（回调 ref，元素出现 / 消失时自动挂载） */
 function useBox() {
@@ -105,6 +110,7 @@ export default function SpellBoard({ ctl }: { ctl: Ctl }) {
   const spectator = ctl.seat === null;
   const n = v.players.length;
   const compact = useCompact();
+  const portrait = usePortrait();
   const scale = useSeatScale();
   const myTurn = !spectator && v.phase === 'play' && v.turn === me;
   useTurnCue(myTurn);
@@ -157,24 +163,29 @@ export default function SpellBoard({ ctl }: { ctl: Ctl }) {
   }, []);
   const closePeek = useCallback(() => setPeek(null), []);
 
-  // ---- 排布：图版居中，对手围坐在两侧 / 上方 ----
+  // ---- 排布：图版居中，对手围坐在两侧 / 上方；竖屏时对手收到上方横带 ----
   const others = Array.from({ length: n - 1 }, (_, i) => (me + 1 + i) % n);
   const slots = slotsFor(others.length, compact);
-  const hasTop = slots.some((s) => s.side === 'top');
   const [arenaRef, arena] = useBox();
   const [topRef, topBox] = useBox();
+  const [stripRef, stripBox] = useBox();
   const W = arena.w;
   const H = arena.h;
-  const topH = hasTop ? topBox.h + 10 : 0;
-  let bh = Math.max(0, H - topH);
+  // 竖屏窄屏（手机竖抱）：左右两栏放不下木架，改用上方横带
+  const narrow = portrait && W > 0 && W <= 620;
+  const useStrip = narrow && W > 0;
+  const stripH = useStrip ? stripBox.h + 10 : 0;
+  const topH = useStrip ? 0 : slots.some((s) => s.side === 'top') ? topBox.h + 10 : 0;
+  let bh = Math.max(0, H - topH - stripH);
   let bw = bh * RATIO;
-  const maxW = W * (compact ? 0.36 : 0.44);
+  // 竖屏没有侧栏占地，图版可以放大到 92% 宽；横屏保持原来的比例限制
+  const maxW = W * (useStrip ? 0.92 : compact ? 0.36 : 0.44);
   if (bw > maxW) {
     bw = maxW;
     bh = bw / RATIO;
   }
   const bx = (W - bw) / 2;
-  const by = topH + (H - topH - bh) / 2;
+  const by = stripH + topH + (H - stripH - topH - bh) / 2;
   const colW = (W - bw) / 2;
 
   // 矮屏上标签会压住名字；座位本身就在左右两侧，不再显示
@@ -189,9 +200,9 @@ export default function SpellBoard({ ctl }: { ctl: Ctl }) {
             ? '右手边'
             : undefined;
 
-  const seatSub = (s: number) => (
+  const seatSub = (s: number, tiny = false) => (
     <span className="ss-sub">
-      <LifeTokens seat={s} life={v.players[s].life} size={compact ? 10 : 13} />
+      <LifeTokens seat={s} life={v.players[s].life} size={tiny ? 8 : compact ? 10 : 13} />
       <span className="ss-sub__lv">第 {Math.min(SS.TARGET, v.players[s].score)} 层</span>
     </span>
   );
@@ -419,7 +430,34 @@ export default function SpellBoard({ ctl }: { ctl: Ctl }) {
           {fresh && <SpellFlash key={fresh.seq} e={fresh} who={name(fresh.seat)} />}
         </div>
 
+        {W > 0 && useStrip && (
+          <div className="ss-strip" ref={stripRef}>
+            {others.map((s) => (
+              <div key={s} className={`ss-opp side-strip ${v.turn === s ? 'is-turn' : ''}`}>
+                <Seat
+                  player={ctl.players[s]}
+                  active={v.turn === s}
+                  deadline={ctl.deadlines[s]}
+                  size={40}
+                  layout="column"
+                  sub={seatSub(s, true)}
+                  tag={relOf(s)}
+                  tagTone="plain"
+                  bubble={bubbleOf(s)}
+                  bubbleSide="bottom"
+                />
+                <div className="ss-rack">
+                  {rackOf(s, 'xs')}
+                  {owlsOf(s)}
+                </div>
+                {floatEl(s)}
+              </div>
+            ))}
+          </div>
+        )}
+
         {W > 0 &&
+          !useStrip &&
           others.map((s, i) => {
             const slot = slots[i];
             const pos: CSSProperties =

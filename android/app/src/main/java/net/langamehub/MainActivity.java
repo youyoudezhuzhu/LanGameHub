@@ -14,13 +14,11 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -85,6 +83,8 @@ public final class MainActivity extends Activity {
     private String renderedRooms = "";
     private String renderedDiagnosis = "";
     private int background, surface, ink, muted, primary, primaryInk;
+    /** 本次回到本界面是从内置大厅切过来的（决定返回键往哪走） */
+    private boolean fromWeb;
 
     private final Runnable polling = new Runnable() {
         @Override public void run() {
@@ -109,7 +109,15 @@ public final class MainActivity extends Activity {
                     android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE)).apply();
         }
         if (state != null) selected = state.getInt("tab");
+        readEntryExtras(getIntent());
         render();
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        fromWeb = false;
+        readEntryExtras(intent);
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -132,6 +140,25 @@ public final class MainActivity extends Activity {
     @Override protected void onDestroy() {
         executor.shutdownNow();
         super.onDestroy();
+    }
+
+    /**
+     * 从内置大厅切回本界面后，按返回键应该回大厅，而不是直接退出 App。
+     * 只有「本次进入是从大厅切过来的」才这么做，首次启动时按返回键仍按系统默认。
+     */
+    @Override public void onBackPressed() {
+        if (fromWeb) {
+            fromWeb = false;
+            Intent intent = new Intent(this, HubWebActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    private void readEntryExtras(Intent intent) {
+        if (intent != null && intent.getBooleanExtra(HubWebActivity.EXTRA_FROM_WEB, false)) fromWeb = true;
     }
 
     private int port() { return preferences.getInt("port", 8787); }
@@ -229,7 +256,7 @@ public final class MainActivity extends Activity {
         stoppingUntil = 0;
         try {
             startForegroundService(new Intent(this, HubService.class).putExtra("port", port())
-                    .putExtra("secret", secret()).putExtra("keepAwake", preferences.getBoolean("awake", true))
+                    .putExtra("secret", secret())
                     .putExtra("verbose", preferences.getBoolean("verbose", true)));
         } catch (RuntimeException error) {
             startingUntil = 0;
@@ -420,15 +447,12 @@ public final class MainActivity extends Activity {
     }
 
     private void openLobby() {
-        String url = link();
-        if (url.isEmpty()) url = "http://127.0.0.1:" + port() + "/";
-        Uri.Builder entry = Uri.parse(url).buildUpon();
-        String nickname = preferences.getString("nickname", "");
-        if (!nickname.isEmpty()) entry.appendQueryParameter("hostName", nickname);
+        // 内置 WebView 打开大厅（不再跳外部浏览器）：
+        // 页面一直在 App 前台，服务进程不会被系统回收，全屏与横竖屏也由原生层接管。
         try {
-            startActivity(new Intent(Intent.ACTION_VIEW, entry.build()));
+            startActivity(new Intent(this, HubWebActivity.class));
         } catch (RuntimeException error) {
-            toast("请安装支持 JavaScript 的浏览器");
+            toast("无法打开内置大厅：" + error.getMessage());
         }
     }
 
@@ -504,20 +528,8 @@ public final class MainActivity extends Activity {
             }
         }));
         space(panel, 13);
-        Switch awake = new Switch(this);
-        awake.setText("锁屏时维持运行");
-        awake.setTextColor(ink);
-        awake.setChecked(preferences.getBoolean("awake", true));
-        awake.setOnCheckedChangeListener((button, checked) -> {
-            preferences.edit().putBoolean("awake", checked).apply();
-            if (online() || processAlive) toast("重启服务后生效");
-        });
-        panel.addView(awake, new LinearLayout.LayoutParams(-1, dp(48)));
-        panel.addView(label("运行期间持有 CPU / Wi-Fi 锁。系统省电策略和热点休眠仍可能断开连接。", 14, muted));
-        panel.addView(button("系统电池设置", false, () -> {
-            try { startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); }
-            catch (RuntimeException error) { toast("当前设备没有提供此设置入口"); }
-        }));
+        panel.addView(label("主机自己也在内置窗口里玩，页面在前台时服务不会被回收，"
+                + "所以不再额外持有 CPU / Wi-Fi 锁，省电一些。", 14, muted));
         Switch theme = new Switch(this);
         theme.setText("浅色主机界面");
         theme.setTextColor(ink);

@@ -7,9 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.res.AssetManager;
-import android.net.wifi.WifiManager;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.Process;
 import java.io.File;
 import java.io.IOException;
@@ -18,13 +16,22 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
+/**
+ * 局域网服务的宿主。
+ *
+ * 保活说明：这个服务跑在独立的前台服务进程（:hub）里，配一个常驻通知。
+ * 之前还额外持有 PARTIAL_WAKE_LOCK 和 WIFI_MODE_FULL_HIGH_PERF 两个锁，
+ * 现在去掉了 —— 因为主机自己是靠内置 WebView 常驻前台来用游戏的，
+ * 页面在前台时进程本来就不会被回收，那两个锁纯属多余的耗电开销。
+ *
+ * 仍然保留的能力：前台服务 + 常驻通知，这样页面退到后台（比如切出去看一眼
+ * 微信）时服务还能活一阵；用户从通知点回来就能继续玩。
+ */
 public final class HubService extends Service {
     static final String STOP = "net.langamehub.STOP";
     static final String STATE = "hub-state.txt";
     static final String LOG = "hub-runtime.log";
     private Thread runtime;
-    private PowerManager.WakeLock wakeLock;
-    private WifiManager.WifiLock wifiLock;
 
     private static native int launchNode(String file, String assets, String port, String secret, String log, boolean verbose);
 
@@ -39,7 +46,6 @@ public final class HubService extends Service {
         int port = intent.getIntExtra("port", 8787);
         String secret = intent.getStringExtra("secret");
         state("starting");
-        if (intent.getBooleanExtra("keepAwake", true)) acquireLocks();
         boolean verbose = intent.getBooleanExtra("verbose", true);
         runtime = new Thread(() -> runServer(port, secret, verbose), "LAN Game Hub");
         runtime.start();
@@ -88,19 +94,6 @@ public final class HubService extends Service {
         }
     }
 
-    private void acquireLocks() {
-        PowerManager power = getSystemService(PowerManager.class);
-        wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LANGameHub:server");
-        wakeLock.setReferenceCounted(false);
-        wakeLock.acquire();
-        WifiManager wifi = getApplicationContext().getSystemService(WifiManager.class);
-        if (wifi != null) {
-            wifiLock = wifi.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "LANGameHub:network");
-            wifiLock.setReferenceCounted(false);
-            wifiLock.acquire();
-        }
-    }
-
     private Notification notification() {
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.createNotificationChannel(new NotificationChannel("lan", "局域网服务",
@@ -130,8 +123,6 @@ public final class HubService extends Service {
     }
 
     @Override public void onDestroy() {
-        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
-        if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
         stopForeground(STOP_FOREGROUND_REMOVE);
         super.onDestroy();
         // Node 的全局运行时每个进程只初始化一次。仅退出隔离的 :hub 进程。

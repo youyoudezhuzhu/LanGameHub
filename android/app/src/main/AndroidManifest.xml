@@ -3,19 +3,30 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application android:allowBackup="false" android:label="LAN Game Hub"
         android:icon="@drawable/hub_icon" android:theme="@style/HubTheme"
         android:usesCleartextTraffic="true" android:extractNativeLibs="true">
-        <activity android:name=".MainActivity" android:exported="true">
+
+        <!-- 原生界面：服务开关、二维码、房间、设置、诊断 -->
+        <activity android:name=".MainActivity" android:exported="true"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|fontScale">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 内置大厅：WebView 直接加载本机服务，页面常驻前台，服务不会被回收，
+             全屏与横竖屏也由原生层接管。旋转时不重建 Activity，页面靠 CSS 重排。 -->
+        <activity android:name=".HubWebActivity" android:exported="false"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|fontScale" />
+
         <service android:name=".HubService" android:exported="false"
             android:foregroundServiceType="connectedDevice" android:process=":hub" />
     </application>

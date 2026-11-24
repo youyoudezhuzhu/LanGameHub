@@ -32,11 +32,11 @@ mkdir -p "$work"/{classes,dex,java/net/langamehub,lib}
 sed 's/<manifest xmlns:/<manifest package="net.langamehub" xmlns:/' "$main/AndroidManifest.xml" > "$work/AndroidManifest.xml"
 "$tools/aapt2" compile --dir "$main/res" -o "$work/resources.zip"
 "$tools/aapt2" link -I "$android" --manifest "$work/AndroidManifest.xml" \
-  --debug-mode --min-sdk-version 26 --target-sdk-version 35 --version-code 3 --version-name 0.3.0 \
+  --debug-mode --min-sdk-version 26 --target-sdk-version 35 --version-code 4 --version-name 0.3.1 \
   -A "$build/generated/hub-assets" --java "$work/java" -o "$work/unsigned.apk" "$work/resources.zip"
 cat > "$work/java/net/langamehub/BuildConfig.java" <<'JAVA'
 package net.langamehub;
-public final class BuildConfig { public static final int VERSION_CODE = 3; }
+public final class BuildConfig { public static final int VERSION_CODE = 4; }
 JAVA
 find "$main/java" "$work/java" -name '*.java' -type f -print > "$work/sources"
 if [[ -n "${HUB_ECJ_JAR:-}" ]]; then
@@ -51,13 +51,22 @@ cp -R "$build/generated/hub-jni/." "$work/lib/"
 cp "$work/dex/"*.dex "$work/"
 (cd "$work" && zip -q -r unsigned.apk lib ./*.dex)
 "$tools/zipalign" -P 16 -f 4 "$work/unsigned.apk" "$work/aligned.apk"
-key=${HUB_DEBUG_KEYSTORE:-"$cache/debug.keystore"}
+# 固定签名：默认用仓库里的 android/keystore/langamehub.jks，保证每次编译签名一致，
+# 新版本可以直接覆盖安装旧版本，不用卸载。详见 android/keystore/README.md。
+key=${HUB_KEYSTORE:-${HUB_DEBUG_KEYSTORE:-"$project/android/keystore/langamehub.jks"}}
+key_alias=${HUB_KEY_ALIAS:-androiddebugkey}
+key_storepass=${HUB_KEYSTORE_PASSWORD:-android}
+key_pass=${HUB_KEY_PASSWORD:-android}
 if [[ ! -f "$key" ]]; then
-  keytool -genkeypair -keystore "$key" -storepass android -keypass android \
-    -alias androiddebugkey -dname 'CN=Android Debug,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 10000
+  echo "缺少签名密钥：$key" >&2
+  echo "仓库里应当带有 android/keystore/langamehub.jks；若要自己生成，请参考 android/keystore/README.md" >&2
+  exit 1
 fi
-"$tools/apksigner" sign --ks "$key" --ks-key-alias androiddebugkey --ks-pass pass:android \
-  --key-pass pass:android --v4-signing-enabled false --out "$work/signed.apk" "$work/aligned.apk"
-"$tools/apksigner" verify "$work/signed.apk"
+"$tools/apksigner" sign --ks "$key" --ks-key-alias "$key_alias" \
+  --ks-pass "pass:$key_storepass" --key-pass "pass:$key_pass" \
+  --v4-signing-enabled false --out "$work/signed.apk" "$work/aligned.apk"
+"$tools/apksigner" verify "$work/signed.apk" >/dev/null
+"$tools/apksigner" verify --print-certs "$work/signed.apk" \
+  | grep -m1 'SHA-256 digest' | sed 's/^/    签名 /'
 mv -f "$work/signed.apk" "$output"
 printf '%s\n' "$output"

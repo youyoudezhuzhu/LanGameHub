@@ -2,7 +2,7 @@
 
 局域网棋牌盒子。由一台 Android 设备开启服务，其他设备在同一个 Wi‑Fi 或热点内通过浏览器加入。
 
-当前为 **0.1.0 调试版**。安装 APK，点击「启动服务」，从同一局域网扫码或打开邀请链接。提供斗地主、掼蛋、德州扑克、四川麻将、中国象棋、国际象棋、魔法出包、UON、卡旦岛、宝石商会。每款游戏都可建房联机，并可在浏览器单人练习。
+当前为 **0.2.0 调试版**。安装 APK，点击「启动服务」，从同一局域网扫码或打开邀请链接。提供斗地主、掼蛋、德州扑克、四川麻将、中国象棋、国际象棋、魔法出包、UON、卡旦岛、宝石商会。十款桌游和原创实时竞技游戏「流光蛇场」均可建房联机，并可在浏览器单人练习。
 
 ## 构建
 
@@ -17,6 +17,16 @@ sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358'
 默认产物位于 `android/app/build/sdk/LAN-Game-Hub-debug.apk`。可将输出路径作为第一个参数。Android Studio 可打开 `android/`，也可尝试使用 `cd android && ./gradlew assembleDebug`。Gradle 配置与 SDK 脚本共用同一资源构建步骤。本次交付 APK 由 SDK 脚本构建，自动化环境的 Gradle 插件依赖解析未完成。
 
 没有完整 JDK 的构建机可以将 `HUB_ECJ_JAR` 指向 Eclipse ECJ 3.40.0 的 JAR，SDK 脚本将使用 ECJ 编译。已准备 npm 依赖时，可使用 `HUB_SKIP_NPM_CI=1` 避免重复安装。Node.js Mobile 预编译包和 ZXing JAR 均通过固定 SHA‑256 校验。`HUB_DEBUG_KEYSTORE` 可指定已有 Android 调试密钥库。
+
+### 自用构建中导入 pvz_perf
+
+默认 APK 包含 11 款游戏。若已有可合法使用的完整 pvz_perf 上游离线 Web 包，将其解包在项目生成目录外，构建时设置 `HUB_PVZ_WEB_DIR`。保留 `web-build-manifest.json`、WebGL 2/Wasm32 运行时和配套的 `pvz-perf.data`。Bilibili 发行版、无资源版及清单校验失败的包会被拒绝。
+
+```sh
+HUB_PVZ_WEB_DIR=/absolute/path/to/pvz-perf-offline ./scripts/build-apk.sh
+```
+
+导入后，游戏库的「街机」分类提供 pvz_perf 单人入口。游戏由当前浏览器运行。玩家可先在游戏中退出保存，再点「返回大厅」。项目默认构建和公开发行都无需 PvZ 素材，也不会下载它们。
 
 ## 桌面开发和测试
 
@@ -36,4 +46,5 @@ LAN_HUB=1 HOST=0.0.0.0 PORT=8787 STATIC_DIR="$PWD/apps/web/dist" node apps/serve
 - [研发阶段、上游差异与接入边界](docs/调研与实施边界.md)
 - [Android、网页和联机架构](docs/架构.md)
 - [来源和许可证清单](docs/许可证.md)
-- [测试报告及真机验收步骤](docs/测试报告.md)
+- [0.2.0 测试报告与剩余验收](docs/测试报告-v0.2.0.md)
+- [0.1.0 测试报告及真机验收步骤](docs/测试报告.md)

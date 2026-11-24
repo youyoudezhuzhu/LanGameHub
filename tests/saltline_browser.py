@@ -35,6 +35,14 @@ def wait(page, expression, timeout=120000):
     return page.wait_for_function(expression, timeout=timeout, polling=150)
 
 
+def payloads(frames, kind):
+    for frame in frames:
+        if frame.get("t") != kind:
+            continue
+        payload = frame["p"]
+        yield from payload if isinstance(payload, list) else [payload]
+
+
 def ready(page, software):
     wait(page, "() => window.__ready || window.__fatal")
     assert page.evaluate("() => window.__ready && !window.__fatal")
@@ -137,14 +145,25 @@ def main(base, software, browser_name):
 
         guest.wait_for_timeout(800)
         for kind in ("ps", "sh"):
-            assert any(frame.get("t") == "toHost" and frame["p"].get("k") == kind for frame in guest_out), kind
-            assert any(frame.get("t") == "toHost" and frame["p"].get("k") == kind for frame in host_in), kind
-        assert any(frame.get("t") == "fromHost" and frame["p"].get("k") in {"snap", "ee"}
-                   for frame in guest_in), guest_in[-12:]
+            assert any(part.get("k") == kind for part in payloads(guest_out, "toHost")), kind
+            assert any(part.get("k") == kind for part in payloads(host_in, "toHost")), kind
+        assert any(part.get("k") in {"snap", "ee"} for part in payloads(guest_in, "fromHost"))
+        # Inject the result into the real host simulator to check that the guest's
+        # settlement UI consumes and renders the relayed result.
+        host.evaluate("""() => {
+            const { net, hostSim } = window.__G;
+            hostSim.onComplete({
+                time: 65, accuracy: .4, kills: 3, retries: 0,
+                players: net.players().map(({id, name}) => ({ id, name, kills: 0 }))
+            });
+        }""")
+        expect(guest.get_by_role("region", name="行动简报")).to_be_visible(timeout=10000)
+        expect(guest.locator('[data-f="kills"]')).to_have_text("3")
+        expect(guest.locator('[data-f="team-list"]')).to_contain_text("（你）")
         assert not host_foreign and not guest_foreign, (host_foreign, guest_foreign)
         assert not host.evaluate("() => window.__errors"), host.evaluate("() => window.__errors")
         assert not guest.evaluate("() => window.__errors"), guest.evaluate("() => window.__errors")
-        print("Same-origin movement, fire and enemy traffic passed", flush=True)
+        print("Same-origin movement, fire, enemy traffic and a controlled settlement passed", flush=True)
         desktop.close()
         phone.close()
 

@@ -64,6 +64,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private SharedPreferences preferences;
     private int selected;
+    private boolean pvzInstalled;
     private boolean visible;
     private boolean loading;
     private long startingUntil;
@@ -94,6 +95,9 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         preferences = getSharedPreferences("hub", MODE_PRIVATE);
+        try (java.io.InputStream module = getAssets().open("hub/web/games/pvz/hub-module.json")) {
+            pvzInstalled = module.read() != -1;
+        } catch (java.io.IOException ignored) {}
         if (!preferences.contains("secret")) {
             byte[] random = new byte[32];
             new java.security.SecureRandom().nextBytes(random);
@@ -129,6 +133,7 @@ public final class MainActivity extends Activity {
     private int port() { return preferences.getInt("port", 8787); }
     private String secret() { return preferences.getString("secret", ""); }
     private boolean online() { return status != null; }
+    private int installedGameCount() { return GAMES.length + (pvzInstalled ? 1 : 0); }
 
     private void refresh() {
         if (loading || executor.isShutdown()) return;
@@ -368,7 +373,7 @@ public final class MainActivity extends Activity {
                 : processAlive ? "服务未响应 · 查看诊断" : "服务已停止";
         statusLabel.setText(state);
         countsLabel.setText(online() ? status.optInt("clients") + " 位在线玩家  ·  "
-                + status.optInt("rooms") + " 个房间  ·  " + GAMES.length + " 款游戏" : GAMES.length + " 款已安装游戏");
+                + status.optInt("rooms") + " 个房间  ·  " + installedGameCount() + " 款游戏" : installedGameCount() + " 款已安装游戏");
         serviceButton.setText(online() || processAlive ? "停止服务" : "启动服务");
         enabled(serviceButton, !pendingStart && !pendingStop);
         enabled(restartButton, online() && !pendingStop);
@@ -430,8 +435,9 @@ public final class MainActivity extends Activity {
             line.setPadding(0, dp(9), 0, dp(9));
             games.addView(line);
         }
+        if (pvzInstalled) games.addView(label("◈   pvz_perf  ·  离线单人", 16, ink));
         LinearLayout pending = card("待接入");
-        pending.addView(label("Slithering.io、Saltline、pvz_perf", 15, muted));
+        pending.addView(label(pvzInstalled ? "Slithering.io、Saltline" : "Slithering.io、Saltline、pvz_perf", 15, muted));
     }
 
     private String roomData() { return online() ? status.optString("roomList") : ""; }

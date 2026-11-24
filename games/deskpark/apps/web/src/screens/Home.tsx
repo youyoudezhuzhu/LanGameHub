@@ -115,7 +115,7 @@ export function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [code, setCode] = useState('');
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
-  const [counts, setCounts] = useState<{ clients: number; rooms: number } | null>(null);
+  const [counts, setCounts] = useState<{ clients: number; rooms: number; pvz?: { version: string } } | null>(null);
   useEffect(() => {
     online.connect();
     const controller = new AbortController();
@@ -247,7 +247,7 @@ export function Home() {
       )}
 
       <div className="hub-library">
-        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, 0)} 款游戏</p></div>
+        <div><h2>游戏库</h2><p>{groups.reduce((count, group) => count + group.games.length, counts?.pvz ? 1 : 0)} 款游戏</p></div>
         <div className="hub-filters" role="group" aria-label="游戏分类">
           {[{ id: 'all' as const, title: '全部' }, ...CATEGORIES].map((item) => (
             <button key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
@@ -259,7 +259,21 @@ export function Home() {
       {visible.map((group) => (
         <section className="games-group" key={group.id}>
           <h2>{group.title}</h2>
-          <div className="games">{group.games.map(tile)}</div>
+          <div className="games">
+            {group.games.map(tile)}
+            {group.id === 'arcade' && counts?.pvz && (
+              <article className="gtile">
+                <div className="gtile__art pvz-tile-art" aria-hidden="true"><Gamepad2 size={42} /></div>
+                <div className="gtile__body">
+                  <div className="gtile__head"><h3>pvz_perf</h3></div>
+                  <p className="gtile__tagline">已导入的离线塔防 · {counts.pvz.version}</p>
+                  <div className="gtile__actions">
+                    <a className="btn btn--primary btn--sm" href="/games/pvz/"><Play size={14} /> 单人</a>
+                  </div>
+                </div>
+              </article>
+            )}
+          </div>
         </section>
       ))}
 

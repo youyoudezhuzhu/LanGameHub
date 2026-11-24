@@ -28,6 +28,10 @@ if [[ "$actual" != "$archive_hash" ]]; then
   echo 'Node.js Mobile archive checksum mismatch.' >&2
   exit 1
 fi
+pvz_source=""
+if [[ -n "${HUB_PVZ_WEB_DIR:-}" ]]; then
+  pvz_source=$(cd "$HUB_PVZ_WEB_DIR" && pwd -P)
+fi
 cd "$project/games/deskpark"
 if [[ "${HUB_SKIP_NPM_CI:-0}" != 1 ]]; then
   npm ci --no-audit --no-fund
@@ -36,6 +40,9 @@ npm run build
 
 mkdir -p "$out/generated/hub-assets"
 assets="$out/generated/hub-assets/hub"
+case "$pvz_source" in
+  "$assets"|"$assets"/*) echo 'Keep your PvZ input outside generated APK assets.' >&2; exit 1 ;;
+esac
 rm -rf "$assets"
 mkdir -p "$assets/web/licenses"
 cp -R apps/web/dist/. "$assets/web/"
@@ -43,6 +50,9 @@ cp apps/server/dist/main.js "$assets/server.mjs"
 cp "$project"/licenses/*.txt "$assets/web/licenses/"
 cp LICENSE "$assets/web/licenses/DeskPark.txt"
 node "$project/scripts/licenses.mjs" "$assets/web/licenses/npm.txt"
+if [[ -n "$pvz_source" ]]; then
+  node "$project/scripts/stage-pvz.mjs" "$pvz_source" "$assets/web"
+fi
 
 for abi in arm64-v8a x86_64; do
   case "$abi" in

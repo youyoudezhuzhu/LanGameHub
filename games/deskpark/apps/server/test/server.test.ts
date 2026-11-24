@@ -1,7 +1,7 @@
 import { hi } from '@park/engine';
 import type { ClientMessage, ServerMessage } from '@park/protocol';
 import { AVATARS, CHAT_MAX_LENGTH, PROTOCOL_VERSION } from '@park/protocol';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -423,4 +423,38 @@ describe('安全加固', () => {
     x.close();
     y.close();
   });
+});
+
+
+it('PvZ 单机入口只在离线模块文件随包提供时发布', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'lan-pvz-module-'));
+  try {
+    const directory = join(root, 'games/pvz');
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, 'hub-module.json'), '{"version":"4.0.6"}');
+    writeFileSync(join(directory, 'index.html'), '<a href="/">返回大厅</a>');
+    const unavailable = startServer({ host: '127.0.0.1', port: 0, staticDir: root, lanOnly: true });
+    try {
+      const response = await fetch(`http://127.0.0.1:${await unavailable.ready}/api/status`);
+      expect(await response.json()).not.toHaveProperty('pvz');
+    } finally {
+      await unavailable.close();
+    }
+    writeFileSync(join(directory, 'pvz-perf.data'), 'packaging fixture');
+    const available = startServer({ host: '127.0.0.1', port: 0, staticDir: root, lanOnly: true });
+    try {
+      const base = `http://127.0.0.1:${await available.ready}`;
+      const status = await fetch(`${base}/api/status`);
+      expect(await status.json()).toMatchObject({ pvz: { version: '4.0.6' } });
+      const data = await fetch(`${base}/games/pvz/pvz-perf.data`);
+      expect(data.headers.get('content-type')).toBe('application/octet-stream');
+      expect(await data.text()).toBe('packaging fixture');
+      const launcher = await fetch(`${base}/games/pvz/`);
+      expect(await launcher.text()).toContain('返回大厅');
+    } finally {
+      await available.close();
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

@@ -1,5 +1,5 @@
 import type { ServerMessage } from '@park/protocol';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createServer as createHttpServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -124,6 +124,20 @@ export function startServer(opts: StartOptions) {
   const hub = new Hub(config);
   const staticDir = opts.staticDir === null ? null : resolve(opts.staticDir ?? defaultStaticDir());
 
+  let pvz: { version: string } | undefined;
+  if (staticDir) {
+    try {
+      const directory = join(staticDir, 'games/pvz');
+      const { version } = JSON.parse(readFileSync(join(directory, 'hub-module.json'), 'utf8'));
+      if (typeof version === 'string' && /^\d+(?:\.\d+){2}$/.test(version) &&
+          ['index.html', 'pvz-perf.data'].every((file) => statSync(join(directory, file)).size > 0)) {
+        pvz = { version };
+      }
+    } catch {
+      // Optional modules have no effect on the built-in library.
+    }
+  }
+
   const http = createHttpServer({ requestTimeout: 12000, headersTimeout: 8000 }, (req, res) => {
     if (opts.lanOnly && (!localPeer(req) || !allowedHost(req))) {
       res.writeHead(403).end();
@@ -157,7 +171,7 @@ export function startServer(opts: StartOptions) {
     }
     if (req.url === '/healthz' || req.url === '/api/status') {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ ok: true, ...hub.stats() }));
+      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ ok: true, ...hub.stats(), ...(req.url === '/api/status' && pvz ? { pvz } : {}) }));
       return;
     }
     if (!opts.lanOnly && isAiProxyPath(req.url)) {

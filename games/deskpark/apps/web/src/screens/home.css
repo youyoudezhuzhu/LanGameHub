@@ -495,3 +495,5 @@
   .hero { padding-inline: 18px; }
   .hub-filters button { padding-inline: 10px; }
 }
+
+.pvz-tile-art { background: radial-gradient(ellipse at top, #65935f, #274d3e); color: #e7f4ea; }
